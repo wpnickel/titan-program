@@ -1,0 +1,5 @@
+# Supabase project configuration. Database changes live in ./migrations.
+project_id = "titan-prod"
+
+[auth]
+enable_signup = false

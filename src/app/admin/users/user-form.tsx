@@ -101,12 +101,14 @@ export function UserForm({ dealerships, reps, initial }: { dealerships: Dealersh
       )}
 
       {needsRep(preset) && (
-        <Field label="Linked rep">
-          <select name="rep_id" value={repId} onChange={(e) => setRepId(e.target.value)} required className={ui.input}>
-            <option value="" disabled>{selected.length ? "Choose the rep this login belongs to" : "Choose a dealership first"}</option>
-            {repChoices.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+        <Field label="Rep record">
+          <select name="rep_id" value={repId} onChange={(e) => setRepId(e.target.value)} className={ui.input}>
+            <option value="">{initial.id ? "Create a new rep for this person" : "Create a new rep from this name (recommended)"}</option>
+            {repChoices.map((r) => <option key={r.id} value={r.id}>Use existing: {r.name}</option>)}
           </select>
-          <span className="mt-1.5 block text-xs text-[#5B5F66]">The rep is the person who competes. Reps already linked to another login are hidden. Add missing reps on the Reps tab.</span>
+          <span className="mt-1.5 block text-xs text-[#5B5F66]">
+            The rep is the record that holds their tally cards and leaderboard numbers. A new one is created for you. Choose an existing rep only if this person already has one, for example from imported history.
+          </span>
         </Field>
       )}
 

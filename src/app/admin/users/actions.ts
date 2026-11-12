@@ -72,11 +72,9 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     assigned = dealershipIds;
   }
 
-  let repId: string | null = null;
-  if (needsRep(preset)) {
-    repId = str(formData, "rep_id") || null;
-    if (!repId) return { error: "Link this login to a rep. Add the rep on the Reps tab first if they are not listed." };
-  }
+  // Salespeople need a rep (the competing record). Use the chosen existing rep, or create one from their name.
+  let repId: string | null = needsRep(preset) ? str(formData, "rep_id") || null : null;
+  const createRep = needsRep(preset) && !repId;
 
   const row = {
     first_name: firstName,
@@ -92,8 +90,28 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
 
   const supabase = await createClient(); // The admin's own session, so the audit log records who made the change.
 
+  let newRepId: string | null = null;
+  if (createRep) {
+    const { data: rep, error: rErr } = await supabase
+      .from("reps")
+      .insert({ first_name: firstName, last_name: lastName, dealership_id: homeDealership })
+      .select("id")
+      .single();
+    if (rErr || !rep) return { error: "Could not create the rep record. Please try again." };
+    newRepId = rep.id;
+    repId = rep.id;
+    row.rep_id = rep.id;
+  } else if (repId && homeDealership) {
+    // Keep the rep at the same dealership as their login.
+    await supabase.from("reps").update({ dealership_id: homeDealership }).eq("id", repId);
+  }
+  const undoRep = async () => {
+    if (newRepId) await supabase.from("reps").delete().eq("id", newRepId);
+  };
+
   if (!isNew) {
     const { error } = await supabase.from("profiles").update(row).eq("id", id);
+    if (error) await undoRep();
     if (error) return { error: error.code === "23505" ? "That rep is already linked to another login." : "Could not save. Please try again." };
     await supabase.from("profile_dealerships").delete().eq("profile_id", id);
     if (assigned.length) {
@@ -108,6 +126,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
   const admin = createAdminClient();
   const created = await admin.auth.admin.createUser({ email, email_confirm: true });
   if (created.error || !created.data.user) {
+    await undoRep();
     return { error: /already|exists|registered/i.test(created.error?.message ?? "") ? "A login with that email already exists." : "Could not create the login. Please try again." };
   }
   const userId = created.data.user.id;
@@ -115,6 +134,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
   const { error: pErr } = await supabase.from("profiles").insert({ id: userId, email, ...row });
   if (pErr) {
     await admin.auth.admin.deleteUser(userId);
+    await undoRep();
     return { error: pErr.code === "23505" ? "That rep is already linked to another login." : "Could not save. Please try again." };
   }
   if (assigned.length) {
@@ -122,6 +142,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     if (aErr) {
       await supabase.from("profiles").delete().eq("id", userId);
       await admin.auth.admin.deleteUser(userId);
+      await undoRep();
       return { error: "Could not save the dealership list. Nothing was created." };
     }
   }

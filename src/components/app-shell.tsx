@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import type { Profile } from "@/lib/auth/session";
 import { signOut } from "@/app/login/actions";
+import { createClient } from "@/lib/supabase/server";
 import { Sidebar, type NavItem } from "./sidebar";
 
 export const ROLE_LABELS = {
@@ -14,10 +15,12 @@ export const ROLE_LABELS = {
 /** The signed-in frame: slim left menu (collapsible) beside the page. Every signed-in page sits inside it. */
 export async function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const collapsed = (await cookies()).get("titan_nav")?.value === "collapsed";
+  const isAdmin = profile.preset === "super_admin";
+  const unread = isAdmin ? ((await (await createClient()).from("alerts").select("id", { count: "exact", head: true }).is("read_at", null)).count ?? 0) : 0;
   const items: NavItem[] = [
     { label: "Home", href: "/", icon: "home" },
     { label: "Tally cards", href: "/cards", icon: "cards" },
-    ...(profile.preset === "super_admin" ? [{ label: "Admin", href: "/admin/users", icon: "admin" as const }] : []),
+    ...(isAdmin ? [{ label: "Audit", href: "/audit", icon: "audit" as const, badge: unread }, { label: "Admin", href: "/admin/users", icon: "admin" as const }] : []),
   ];
   return (
     <div className="min-h-screen lg:flex">

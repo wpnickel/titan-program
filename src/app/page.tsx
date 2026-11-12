@@ -14,10 +14,11 @@ export default async function Home() {
   const profile = await requireUser();
   const supabase = await createClient();
 
-  const [{ data: monthRows }, { data: reps }, { data: latest }] = await Promise.all([
+  const [{ data: monthRows }, { data: reps }, { data: latest }, { data: secAccess }] = await Promise.all([
     supabase.from("months").select("month_start, status").order("month_start", { ascending: true }),
     supabase.rpc("enterable_reps"),
     supabase.rpc("latest_finalized_month"),
+    supabase.rpc("securitas_access"),
   ]);
   const months = (monthRows ?? []) as { month_start: string; status: "open" | "in_audit" | "finalized" }[];
   const open = months.filter((m) => m.status === "open");
@@ -38,16 +39,21 @@ export default async function Home() {
   if (!auditNote && inAudit) auditNote = `${monthLabel(inAudit.month_start, false)} is being audited`;
 
   const finalized = (latest as unknown as string | null) ?? null;
-  let monthly: BoardRow[] = [], ytd: BoardRow[] = [], cronus: CronusRow[] = [];
+  let monthly: BoardRow[] = [], ytd: BoardRow[] = [], cronus: CronusRow[] = [], secMonthly: BoardRow[] = [], secYtd: BoardRow[] = [];
+  const showSecuritas = secAccess === true;
   if (finalized) {
-    const [a, b, c] = await Promise.all([
+    const [a, b, c, d, e] = await Promise.all([
       supabase.rpc("board", { p_kind: "month", p_month: finalized }),
       supabase.rpc("board", { p_kind: "ytd", p_month: finalized }),
       supabase.rpc("cronus_trip", { p_month: finalized }),
+      showSecuritas ? supabase.rpc("securitas_board", { p_kind: "month", p_month: finalized }) : Promise.resolve({ data: [] }),
+      showSecuritas ? supabase.rpc("securitas_board", { p_kind: "ytd", p_month: finalized }) : Promise.resolve({ data: [] }),
     ]);
     monthly = (a.data ?? []) as BoardRow[];
     ytd = (b.data ?? []) as BoardRow[];
     cronus = (c.data ?? []) as CronusRow[];
+    secMonthly = (d.data ?? []) as BoardRow[];
+    secYtd = (e.data ?? []) as BoardRow[];
   }
   const mine = profile.rep_id;
 
@@ -88,6 +94,25 @@ export default async function Home() {
                 empty="No qualifiers yet."
                 items={cronus.map((r) => ({ key: r.rep_id, rank: r.slot, name: repName(r), note: r.reason, rep_id: r.rep_id }))} />
             </section>
+
+            {showSecuritas && (
+              <>
+                <div className="mt-2 flex flex-wrap items-baseline gap-3.5">
+                  <h2 className="text-[26px] font-extrabold tracking-tight">Securitas leaderboards</h2>
+                  <Pill tone="dark">Securitas only</Pill>
+                  <span className="text-[13px] text-[#5B5F66]">{monthLabel(finalized, false)}, ranked among Securitas salespeople</span>
+                </div>
+                <section className="grid grid-cols-1 gap-5 md:grid-cols-2 min-[1700px]:grid-cols-4">
+                  {CATEGORIES.map((c) => <CategoryCard key={c.key} cat={c} rows={secMonthly} month={finalized} mine={mine} scope="securitas" />)}
+                </section>
+                <section className="flex flex-wrap gap-5">
+                  <NameList title="Securitas Supreme Titan" href={`/leaderboards?board=supreme&month=${finalized}&scope=securitas`} mine={mine}
+                    sub={`Year to date, January through ${monthLabel(finalized, false)} (audited months only)`}
+                    empty="No one is ranked in all four categories yet."
+                    items={ordered(secYtd, (r) => r.overall_rank).slice(0, 10).map((r) => ({ key: r.rep_id, rank: r.overall_rank, name: repName(r), rep_id: r.rep_id }))} />
+                </section>
+              </>
+            )}
           </>
         ) : (
           <section className={`${ui.card} p-6`}>

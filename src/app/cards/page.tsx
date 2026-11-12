@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { Pill, ui } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -35,8 +35,7 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
   const canEnter = (reps ?? []).length > 0;
 
   return (
-    <>
-      <AppHeader profile={profile} active="Tally cards" />
+    <AppShell profile={profile}>
       <main className="mx-auto flex max-w-[1296px] flex-col gap-6 px-4 py-8 sm:px-8">
         <div className="flex flex-wrap items-center gap-3.5">
           <h1 className="text-[30px] font-extrabold tracking-tight">Tally cards</h1>
@@ -107,6 +106,6 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
           )}
         </section>
       </main>
-    </>
+    </AppShell>
   );
 }

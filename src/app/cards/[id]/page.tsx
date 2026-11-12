@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { CustomerType, RepOption } from "@/lib/cards";
@@ -34,8 +34,7 @@ export default async function CardPage({ params }: { params: Promise<{ id: strin
 
   const money = (n: number) => (n ? String(Number(n)) : "");
   return (
-    <>
-      <AppHeader profile={profile} active="Tally cards" />
+    <AppShell profile={profile}>
       <main className="mx-auto flex max-w-[1296px] flex-col gap-6 px-4 py-8 sm:px-8">
         <CardForm
           {...lists}
@@ -54,6 +53,6 @@ export default async function CardPage({ params }: { params: Promise<{ id: strin
           }}
         />
       </main>
-    </>
+    </AppShell>
   );
 }

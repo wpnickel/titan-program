@@ -13,16 +13,6 @@ function fields(formData: FormData) {
   };
 }
 
-export async function addRep(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireSuperAdmin();
-  const f = fields(formData);
-  if (!f.first_name || !f.last_name || !f.dealership_id) return { error: "Enter a first name, last name and dealership." };
-  const { error } = await (await createClient()).from("reps").insert(f);
-  if (error) return { error: "Could not save. Please try again." };
-  revalidatePath("/admin/reps");
-  return { notice: `Added ${f.first_name} ${f.last_name}.` };
-}
-
 export async function saveRep(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireSuperAdmin();
   const id = String(formData.get("id") ?? "");
@@ -33,6 +23,6 @@ export async function saveRep(_prev: ActionState, formData: FormData): Promise<A
     .update({ ...f, active: formData.get("active") === "on" })
     .eq("id", id);
   if (error) return { error: "Could not save. Please try again." };
-  revalidatePath("/admin/reps");
+  revalidatePath("/admin/users");
   return { notice: "Saved." };
 }

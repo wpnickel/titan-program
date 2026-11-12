@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Avatar, Chevron, Pill, ui } from "@/components/ui";
+import { ActionForm } from "@/components/action-form";
+import { Avatar, Chevron, Field, Pill, Switch, ui } from "@/components/ui";
+import { saveRep } from "../reps/actions";
 import { PRESET_DEFAULTS, PRESET_LABELS, TOGGLE_KEYS, type Preset, type Toggles } from "@/lib/permissions";
 import { requireSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -14,7 +16,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
   const [{ data: dealershipRows }, { data: repRows }, { data: profileRows }, { data: assignRows }] = await Promise.all([
     supabase.from("dealerships").select("id, name, active").order("name"),
-    supabase.from("reps").select("id, first_name, last_name, dealership_id").eq("active", true).order("last_name"),
+    supabase.from("reps").select("id, first_name, last_name, dealership_id, active").order("last_name"),
     supabase.from("profiles").select("*").order("last_name").order("first_name"),
     supabase.from("profile_dealerships").select("profile_id, dealership_id"),
   ]);
@@ -22,7 +24,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const dealerships = (dealershipRows ?? []).filter((d) => d.active).map((d) => ({ id: d.id, name: d.name }));
   const nameById = new Map((dealershipRows ?? []).map((d) => [d.id, d.name]));
   const takenBy = new Map((profileRows ?? []).filter((p) => p.rep_id).map((p) => [p.rep_id as string, p.id as string]));
-  const reps = (repRows ?? []).map((r) => ({
+  const reps = (repRows ?? []).filter((r) => r.active).map((r) => ({
     id: r.id, name: `${r.first_name} ${r.last_name}`, dealership_id: r.dealership_id, takenBy: takenBy.get(r.id) ?? null,
   }));
 
@@ -39,14 +41,21 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     .filter((u) => !dealership || u.ids.includes(dealership) || u.scope === "all")
     .filter((u) => !q || `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(q.toLowerCase()));
 
+  // Reps with no login yet (never signs in, or imported history) show in the same list.
+  const repOnly = (repRows ?? [])
+    .filter((r) => !takenBy.has(r.id))
+    .filter((r) => (inactive === "1" ? true : r.active))
+    .filter((r) => !dealership || r.dealership_id === dealership)
+    .filter((r) => !q || `${r.first_name} ${r.last_name}`.toLowerCase().includes(q.toLowerCase()));
+
   const blank = { preset: "salesperson_enters" as Preset, toggles: PRESET_DEFAULTS.salesperson_enters };
 
   return (
     <div className="flex flex-col gap-5">
       <details className="group flex flex-col gap-3">
         <summary className="flex list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-          <span className="text-sm text-[#5B5F66]">{users.length} {users.length === 1 ? "user" : "users"}</span>
-          <span className={ui.primary}>+ Invite user</span>
+          <span className="text-sm text-[#5B5F66]">{users.length + repOnly.length} {users.length + repOnly.length === 1 ? "person" : "people"}</span>
+          <span className={ui.primary}>+ Add person</span>
         </summary>
         <div className={`${ui.card} p-5`}>
           <UserForm dealerships={dealerships} reps={reps} initial={blank} />
@@ -101,7 +110,53 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             </li>
           );
         })}
-        {users.length === 0 && <li className={`${ui.card} p-8 text-center text-sm text-[#5B5F66]`}>No users match.</li>}
+        {repOnly.map((r) => (
+          <li key={r.id}>
+            <details className={`group ${ui.card} open:shadow-[0_2px_12px_rgba(17,18,20,0.06)]`}>
+              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3.5 p-4 [&::-webkit-details-marker]:hidden">
+                <Avatar text={`${r.first_name} ${r.last_name}`} />
+                <span className="min-w-0 flex-1 basis-52">
+                  <span className={`block text-[15px] font-bold ${r.active ? "" : "text-[#8E929A]"}`}>{r.first_name} {r.last_name}</span>
+                  <span className="block truncate text-[13px] text-[#5B5F66]">{nameById.get(r.dealership_id) ?? "Inactive dealership"}</span>
+                </span>
+                <span className="flex flex-wrap gap-1.5">
+                  <Pill>Salesperson</Pill>
+                  <Pill tone="outline">No login</Pill>
+                  {!r.active && <Pill tone="outline">Inactive</Pill>}
+                </span>
+                <Chevron />
+              </summary>
+              <div className="flex flex-col gap-5 border-t border-[#EEEFF1] p-5">
+                <div>
+                  <h3 className="mb-3 text-[15px] font-extrabold">Give {r.first_name} a login</h3>
+                  <UserForm
+                    dealerships={dealerships}
+                    reps={reps}
+                    initial={{ first_name: r.first_name, last_name: r.last_name, dealershipIds: [r.dealership_id], rep_id: r.id, preset: "salesperson_view", toggles: PRESET_DEFAULTS.salesperson_view }}
+                  />
+                </div>
+                <div className="border-t border-[#EEEFF1] pt-4">
+                  <h3 className="mb-3 text-[15px] font-extrabold">Edit this person</h3>
+                  <ActionForm action={saveRep} className="flex flex-col gap-4">
+                    <input type="hidden" name="id" value={r.id} />
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <Field label="First name"><input name="first_name" defaultValue={r.first_name} required className={ui.input} /></Field>
+                      <Field label="Last name"><input name="last_name" defaultValue={r.last_name} required className={ui.input} /></Field>
+                      <Field label="Dealership">
+                        <select name="dealership_id" defaultValue={r.dealership_id} className={ui.input}>
+                          {dealerships.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        </select>
+                      </Field>
+                    </div>
+                    <Switch name="active" label="Active" note="Inactive people keep their history but no longer appear in new entries." defaultChecked={r.active} />
+                    <div><button className={ui.dark}>Save changes</button></div>
+                  </ActionForm>
+                </div>
+              </div>
+            </details>
+          </li>
+        ))}
+        {users.length + repOnly.length === 0 && <li className={`${ui.card} p-8 text-center text-sm text-[#5B5F66]`}>No one matches.</li>}
       </ul>
     </div>
   );

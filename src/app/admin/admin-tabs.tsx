@@ -4,9 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { label: "Dealerships", href: "/admin/dealerships" },
   { label: "Users", href: "/admin/users" },
-  { label: "Reps", href: "/admin/reps" },
+  { label: "Dealerships", href: "/admin/dealerships" },
 ] as const;
 
 export function AdminTabs() {

@@ -13,12 +13,13 @@ import type { ActionState } from "@/components/action-form";
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
 /** Makes a one-time link for choosing a password and emails it. */
-async function emailPasswordLink(email: string, firstName: string): Promise<boolean> {
+async function emailPasswordLink(userId: string, email: string, firstName: string): Promise<boolean> {
   const { data, error } = await createAdminClient().auth.admin.generateLink({ type: "recovery", email });
   if (error || !data.properties?.hashed_token) return false;
   const link = `${await siteOrigin()}/auth/accept?token_hash=${encodeURIComponent(data.properties.hashed_token)}`;
   try {
     await sendInvite(email, firstName, link);
+    await createAdminClient().from("profile_status").upsert({ profile_id: userId, invited_at: new Date().toISOString() });
     return true;
   } catch {
     return false;
@@ -36,8 +37,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
   const lastName = str(formData, "last_name");
   const email = str(formData, "email").toLowerCase();
   if (!firstName || !lastName) return { error: "Enter a first and last name." };
-  const noLogin = formData.get("no_login") === "on";
-  if (isNew && !noLogin && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address." };
+  if (isNew && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address." };
 
   let active = formData.get("active") === "on";
   if (id === me.id) {
@@ -90,16 +90,6 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
   };
 
   const supabase = await createClient(); // The admin's own session, so the audit log records who made the change.
-
-  // "This person won't sign in": create only the rep record.
-  if (isNew && needsRep(preset) && noLogin && !repId) {
-    const { error: nErr } = await supabase
-      .from("reps")
-      .insert({ first_name: firstName, last_name: lastName, dealership_id: homeDealership });
-    if (nErr) return { error: "Could not save. Please try again." };
-    revalidatePath("/admin/users");
-    return { notice: `Added ${firstName} ${lastName}. They have no login. You can invite them later from the list.` };
-  }
 
   let newRepId: string | null = null;
   if (createRep) {
@@ -158,12 +148,16 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     }
   }
 
-  const sent = await emailPasswordLink(email, firstName);
+  if (formData.get("send_invite") !== "on") {
+    revalidatePath("/admin/users");
+    return { notice: `Added ${firstName}. Not invited yet. Open them in the list and press “Send invite” when you are ready.` };
+  }
+  const sent = await emailPasswordLink(userId, email, firstName);
   await logAuth(me.id, sent ? "INVITE_SENT" : "INVITE_FAILED", { to: email });
   revalidatePath("/admin/users");
   return sent
     ? { notice: `Invited ${firstName}. They will get an email to set a password.` }
-    : { notice: `Created ${firstName}, but the invite email did not send. Open them in the list and use “Send invite again”.` };
+    : { notice: `Added ${firstName}, but the invite email did not send. Open them in the list and use “Send invite”.` };
 }
 
 export async function resendInvite(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -172,7 +166,7 @@ export async function resendInvite(_prev: ActionState, formData: FormData): Prom
   const { data: profile } = await (await createClient()).from("profiles").select("email, first_name, active").eq("id", id).maybeSingle();
   if (!profile) return { error: "User not found." };
   if (!profile.active) return { error: "This user is inactive. Reactivate them first." };
-  const sent = await emailPasswordLink(profile.email, profile.first_name);
+  const sent = await emailPasswordLink(id, profile.email, profile.first_name);
   await logAuth(me.id, sent ? "INVITE_SENT" : "INVITE_FAILED", { to: profile.email, resend: true });
   return sent ? { notice: "Sent. The link in the email works once and expires." } : { error: "The email did not send. Please try again." };
 }

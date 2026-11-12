@@ -25,7 +25,7 @@ insert into public.profiles (id, email, first_name, last_name, preset, scope, de
 insert into public.profile_dealerships values
   ('f0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-00000000000a'),
   ('f0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-00000000000b');
-insert into public.months (month_start) values ('2026-10-01'), ('2026-11-01');
+insert into public.months (month_start) values ('2026-10-01'), ('2026-11-01') on conflict do nothing;
 
 -- Signed-out visitors ---------------------------------------------------------
 select t.as_anon();

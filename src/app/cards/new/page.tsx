@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { ui } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { CardForm } from "../card-form";
@@ -14,8 +14,7 @@ export default async function NewCardPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <>
-      <AppHeader profile={profile} active="Tally cards" />
+    <AppShell profile={profile}>
       <main className="mx-auto flex max-w-[1296px] flex-col gap-6 px-4 py-8 sm:px-8">
         {canEnter ? (
           <CardForm
@@ -37,6 +36,6 @@ export default async function NewCardPage() {
           </section>
         )}
       </main>
-    </>
+    </AppShell>
   );
 }

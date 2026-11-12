@@ -111,11 +111,11 @@ export function Sidebar({ items, user, collapsedInitially, signOut }: Props) {
       </aside>
 
       {/* Phone and tablet: top bar with a menu button that opens the same menu as a drawer. */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#E6E7EA] bg-white px-4 py-2 lg:hidden">
-        <Link href="/" aria-label="Home"><Image src="/titan-logo.png" alt="SNDA Sales Titan Program" width={220} height={72} className="h-10 w-auto" /></Link>
+      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[#E6E7EA] bg-white px-4 py-2 lg:hidden">
         <button type="button" onClick={() => setOpen(true)} aria-label="Open menu" aria-expanded={open} className="flex size-11 cursor-pointer items-center justify-center rounded-xl border border-[#CFD1D6]">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
         </button>
+        <Link href="/" aria-label="Home"><Image src="/titan-logo.png" alt="SNDA Sales Titan Program" width={220} height={72} className="h-10 w-auto" /></Link>
       </header>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">

@@ -13,6 +13,7 @@ export type Profile = {
   preset: "salesperson_view" | "salesperson_enters" | "team_admin" | "manager_owner" | "super_admin";
   scope: "own" | "dealership" | "assigned" | "all";
   active: boolean;
+  rep_id: string | null;
 };
 
 /** The signed-in user's password session (the first step only). */
@@ -25,7 +26,7 @@ export async function getPasswordSessionUser() {
 export async function getActiveProfile(userId: string): Promise<Profile | null> {
   const { data } = await createAdminClient()
     .from("profiles")
-    .select("id, email, first_name, last_name, title, preset, scope, active")
+    .select("id, email, first_name, last_name, title, preset, scope, active, rep_id")
     .eq("id", userId)
     .maybeSingle();
   return data && data.active ? (data as Profile) : null;

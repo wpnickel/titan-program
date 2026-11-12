@@ -147,7 +147,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                   <div className="flex flex-wrap gap-2"><MonthControls month={m.month_start} name={monthName(m.month_start)} kind="start" unreviewed={0} /></div>
                 )}
                 {m.status === "finalized" && (
-                  <div className="flex flex-wrap gap-2"><MonthControls month={m.month_start} name={monthName(m.month_start)} kind="reopen" unreviewed={0} /></div>
+                  <div className="flex flex-wrap gap-2"><MonthControls month={m.month_start} name={monthName(m.month_start)} kind="reopen" unreviewed={0} />
+                    <a href={`/audit/leaders/${m.month_start}`} className="inline-flex h-[42px] items-center rounded-[10px] border border-[#111214] bg-white px-4 text-sm font-bold !text-[#111214] hover:bg-[#F5F5F6]">Export leaders</a>
+                  </div>
                 )}
               </article>
             );

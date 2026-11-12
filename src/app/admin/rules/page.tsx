@@ -1,6 +1,7 @@
 import { ui } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { DEFAULT_ORDER, TIEBREAK_LABELS, TiebreakForm } from "./tiebreak-form";
+import { DEFAULT_ORDER, TIEBREAK_LABELS } from "./order";
+import { TiebreakForm } from "./tiebreak-form";
 
 export const instant = false;
 

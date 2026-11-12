@@ -2,15 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { ui } from "@/components/ui";
+import { DEFAULT_ORDER, TIEBREAK_LABELS } from "./order";
 import { saveTiebreakOrder } from "./actions";
-
-export const TIEBREAK_LABELS: Record<string, { label: string; note: string }> = {
-  rmr: { label: "RMR", note: "Monthly recurring revenue on counted cards" },
-  install: { label: "Install", note: "Installation dollars on counted cards" },
-  new_logos: { label: "New logos", note: "Count of qualifying new logos" },
-  points: { label: "Sonitrol points", note: "Sum of card points" },
-};
-export const DEFAULT_ORDER = ["rmr", "new_logos", "points", "install"];
 
 /** Four categories in tie-breaker order, with up and down buttons. */
 export function TiebreakForm({ initial }: { initial: string[] }) {

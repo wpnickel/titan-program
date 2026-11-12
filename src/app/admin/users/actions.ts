@@ -36,7 +36,8 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
   const lastName = str(formData, "last_name");
   const email = str(formData, "email").toLowerCase();
   if (!firstName || !lastName) return { error: "Enter a first and last name." };
-  if (isNew && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address." };
+  const noLogin = formData.get("no_login") === "on";
+  if (isNew && !noLogin && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address." };
 
   let active = formData.get("active") === "on";
   if (id === me.id) {
@@ -90,6 +91,16 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
 
   const supabase = await createClient(); // The admin's own session, so the audit log records who made the change.
 
+  // "This person won't sign in": create only the rep record.
+  if (isNew && needsRep(preset) && noLogin && !repId) {
+    const { error: nErr } = await supabase
+      .from("reps")
+      .insert({ first_name: firstName, last_name: lastName, dealership_id: homeDealership });
+    if (nErr) return { error: "Could not save. Please try again." };
+    revalidatePath("/admin/users");
+    return { notice: `Added ${firstName} ${lastName}. They have no login. You can invite them later from the list.` };
+  }
+
   let newRepId: string | null = null;
   if (createRep) {
     const { data: rep, error: rErr } = await supabase
@@ -102,8 +113,8 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     repId = rep.id;
     row.rep_id = rep.id;
   } else if (repId && homeDealership) {
-    // Keep the rep at the same dealership as their login.
-    await supabase.from("reps").update({ dealership_id: homeDealership }).eq("id", repId);
+    // Keep the rep in step with their login: same name, dealership and active state.
+    await supabase.from("reps").update({ first_name: firstName, last_name: lastName, dealership_id: homeDealership, active: isNew ? true : active }).eq("id", repId);
   }
   const undoRep = async () => {
     if (newRepId) await supabase.from("reps").delete().eq("id", newRepId);

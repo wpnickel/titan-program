@@ -33,10 +33,13 @@ export function UserForm({ dealerships, reps, initial }: { dealerships: Dealersh
   const [selected, setSelected] = useState<string[]>(initial.dealershipIds ?? []);
   const [allDealerships, setAllDealerships] = useState(initial.scope === "all" && initial.preset === "manager_owner");
   const [repId, setRepId] = useState(initial.rep_id ?? "");
+  const [noLogin, setNoLogin] = useState(false);
 
   const mode = dealershipMode(preset);
   const locked = lockedOff(preset);
   const shownToggles = applyRules(preset, toggles);
+  const canSkipLogin = isNew && needsRep(preset) && !repId;
+  const skipLogin = canSkipLogin && noLogin;
   const repChoices = reps.filter((r) => selected.includes(r.dealership_id) && (!r.takenBy || r.takenBy === initial.id));
 
   function choosePreset(p: Preset) {
@@ -54,7 +57,7 @@ export function UserForm({ dealerships, reps, initial }: { dealerships: Dealersh
         <Field label="Last name"><input name="last_name" defaultValue={initial.last_name} required className={ui.input} /></Field>
         <Field label="Email">
           {isNew
-            ? <input name="email" type="email" required autoComplete="off" className={ui.input} />
+            ? <input name="email" type="email" required={!skipLogin} disabled={skipLogin} placeholder={skipLogin ? "Not needed" : ""} autoComplete="off" className={ui.input} />
             : <input value={initial.email} readOnly className={`${ui.input} bg-[#F5F5F6] text-[#5B5F66]`} />}
         </Field>
         <Field label="Title (optional)"><input name="title" defaultValue={initial.title ?? ""} placeholder="e.g. General Manager" className={ui.input} /></Field>
@@ -112,6 +115,11 @@ export function UserForm({ dealerships, reps, initial }: { dealerships: Dealersh
         </Field>
       )}
 
+      {canSkipLogin && (
+        <Switch name="no_login" label="This person won't sign in" note="Adds them to the leaderboards without a login. You can invite them later." checked={noLogin} onChange={setNoLogin} />
+      )}
+
+      {!skipLogin && (
       <div>
         <div className={`${ui.eyebrow} mb-1`}>PERMISSIONS</div>
         <div>
@@ -122,13 +130,14 @@ export function UserForm({ dealerships, reps, initial }: { dealerships: Dealersh
           ))}
         </div>
       </div>
+      )}
 
       {!isNew && (
         <Switch name="active" label="Active" note={initial.isSelf ? "You cannot deactivate your own login." : "Inactive users cannot sign in. Their history is kept."} defaultChecked={initial.active} disabled={initial.isSelf} />
       )}
       {initial.isSelf && <input type="hidden" name="active" value="on" />}
 
-      <div><button className={isNew ? ui.primary : ui.dark}>{isNew ? "Send invite" : "Save changes"}</button></div>
+      <div><button className={isNew ? ui.primary : ui.dark}>{skipLogin ? "Add person" : isNew ? "Send invite" : "Save changes"}</button></div>
     </ActionForm>
   );
 }

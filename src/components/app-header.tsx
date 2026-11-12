@@ -11,8 +11,8 @@ export const ROLE_LABELS = {
   super_admin: "Super admin",
 } as const;
 
-export function AppHeader({ profile, active }: { profile: Profile; active: "Home" | "Admin" }) {
-  const nav = [{ label: "Home", href: "/" as const }, ...(profile.preset === "super_admin" ? [{ label: "Admin", href: "/admin/users" as const }] : [])];
+export function AppHeader({ profile, active }: { profile: Profile; active: "Home" | "Tally cards" | "Admin" }) {
+  const nav = [{ label: "Home", href: "/" as const }, { label: "Tally cards", href: "/cards" as const }, ...(profile.preset === "super_admin" ? [{ label: "Admin", href: "/admin/users" as const }] : [])];
   return (
     <header className="flex flex-wrap items-center gap-x-8 gap-y-2 border-b border-[#E6E7EA] bg-white px-8 py-2">
       <Image src="/titan-logo.png" alt="SNDA Sales Titan Program" width={220} height={72} priority className="h-11 w-auto" />

@@ -45,3 +45,10 @@ export async function requireUser(): Promise<Profile> {
   }
   return profile;
 }
+
+/** For admin pages: only super admins get in. */
+export async function requireSuperAdmin(): Promise<Profile> {
+  const profile = await requireUser();
+  if (profile.preset !== "super_admin") redirect("/");
+  return profile;
+}

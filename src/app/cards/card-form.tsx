@@ -109,6 +109,9 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
   const qualifying = products.filter((p) => p.qualifies_new_logo && (qty[p.id] ?? 0) > 0).map((p) => p.label.replace(/\s*\(.*\)$/, ""));
   const checks = newLogoChecks({ type, addendum, qualifying, rmr: rmrN, install: installN, term: termN, similar: similar[0]?.name ?? null });
   const uploadRequired = needsUpload(type, tcv);
+  // A submitted card that did not need a PDF before, but does after this edit, cannot be saved until one is added.
+  const initiallyNeededUpload = needsUpload(initial.customer_type, tcvOf(num(initial.rmr_amount), Math.round(num(initial.term_months)), num(initial.install_amount)));
+  const editNeedsPdf = submitted && uploadRequired && files.length === 0 && !initiallyNeededUpload;
   const isLate = Boolean(saleDate) && saleDate < month;
 
   // Look for a similar customer at the same dealership while the name is typed.
@@ -141,7 +144,12 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
   }
 
   async function saveDraft() {
-    setBusy("save"); setMessage(null);
+    setMessage(null);
+    if (editNeedsPdf) {
+      setMessage({ kind: "error", text: "This card now needs a PDF (new logos, residential, and contracts of $15,000 or more). Add the PDF below, then save your changes." });
+      return;
+    }
+    setBusy("save");
     const id = await persist();
     if (id) setMessage({ kind: "ok", text: submitted ? "Changes saved." : "Draft saved. Submit it when it is ready." });
     setBusy(null);

@@ -24,15 +24,16 @@ export function Field({ label, children, className }: { label: string; children:
 }
 
 /** A pill-shaped tag, like the role and status chips in the mockups. */
-export function Pill({ children, tone = "light" }: { children: ReactNode; tone?: "light" | "dark" | "crimson" | "outline" | "green" }) {
+export function Pill({ children, tone = "light" }: { children: ReactNode; tone?: "light" | "dark" | "crimson" | "outline" | "green" | "amber" }) {
   const tones = {
     light: "bg-[#F0F0F2] text-[#111214]",
     dark: "bg-[#111214] text-white",
     crimson: "bg-[#FBE7EC] text-[#9E1031]",
     outline: "border border-[#CFD1D6] text-[#5B5F66]",
     green: "bg-[#E3F4E8] text-[#1F7A3D]",
+    amber: "bg-[#FFF4DC] text-[#7A4B00]",
   };
-  return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${tones[tone]}`}>{children}</span>;
+  return <span className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${tones[tone]}`}>{children}</span>;
 }
 
 export function Avatar({ text, size = "md" }: { text: string; size?: "md" | "lg" }) {

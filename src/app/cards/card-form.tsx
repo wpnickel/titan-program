@@ -422,6 +422,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
             </div>
           </section>
 
+          {type === "new_logo" && (
           <section className={`${ui.card} flex flex-col gap-3.5 p-6`}>
             <h2 className="text-lg font-extrabold">New logo check</h2>
             <ul className="flex flex-col gap-3">
@@ -437,6 +438,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
               ))}
             </ul>
           </section>
+          )}
 
           {!readOnly && (
             <section className="flex flex-col gap-2.5">

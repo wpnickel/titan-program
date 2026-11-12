@@ -128,7 +128,7 @@ export function UserForm({ dealerships, reps, initial }: { dealerships: Dealersh
       )}
 
       {!isNew && (
-        <Switch name="active" label="Active" note={initial.isSelf ? "You cannot deactivate your own login." : "Inactive users cannot sign in. Their history is kept."} defaultChecked={initial.active} disabled={initial.isSelf} />
+        <Switch name="active" label="Account enabled" note={initial.isSelf ? "You cannot disable your own login." : "Turn off to stop them signing in. Their history is kept."} defaultChecked={initial.active} disabled={initial.isSelf} />
       )}
       {initial.isSelf && <input type="hidden" name="active" value="on" />}
 

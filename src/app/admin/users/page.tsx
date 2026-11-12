@@ -96,7 +96,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                     {u.title && <Pill tone="outline">{u.title}</Pill>}
                     {u.status === "Not invited" && <Pill tone="crimson">Not invited</Pill>}
                     {u.status === "Invited" && <Pill tone="outline">Invited</Pill>}
-                    {!u.active && <Pill tone="outline">Inactive</Pill>}
+                    {u.status === "Active" && <Pill tone="green">Active</Pill>}
+                    {!u.active && <Pill tone="outline">Disabled</Pill>}
                   </span>
                   <Chevron />
                 </summary>

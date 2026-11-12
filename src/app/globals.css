@@ -6,4 +6,9 @@
 
 body {
   font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+a:hover { color: inherit; }
+button, summary { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid #C8173F; outline-offset: 2px; }

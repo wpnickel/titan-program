@@ -43,15 +43,24 @@ export function Avatar({ text, size = "md" }: { text: string; size?: "md" | "lg"
   );
 }
 
-/** An on/off switch that works inside a normal form (it submits like a checkbox). */
-export function Switch({ name, label, note, defaultChecked }: { name: string; label: string; note?: string; defaultChecked?: boolean }) {
+/** An on/off switch that works inside a normal form (it submits like a checkbox). Pass checked + onChange to control it. */
+export function Switch({
+  name, label, note, defaultChecked, checked, onChange, disabled,
+}: {
+  name: string; label: string; note?: string; defaultChecked?: boolean;
+  checked?: boolean; onChange?: (on: boolean) => void; disabled?: boolean;
+}) {
+  const controlled = checked !== undefined;
   return (
-    <label className="flex cursor-pointer items-center gap-4 border-t border-[#EEEFF1] py-3 first:border-t-0">
+    <label className={`flex items-center gap-4 border-t border-[#EEEFF1] py-3 first:border-t-0 ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-bold">{label}</span>
         {note && <span className="block text-xs leading-snug text-[#5B5F66]">{note}</span>}
       </span>
-      <input type="checkbox" name={name} defaultChecked={defaultChecked} className="peer sr-only" />
+      <input
+        type="checkbox" name={name} disabled={disabled} className="peer sr-only"
+        {...(controlled ? { checked, onChange: (e) => onChange?.(e.target.checked) } : { defaultChecked })}
+      />
       <span
         aria-hidden
         className="relative h-7 w-12 shrink-0 rounded-full bg-[#B8BBC2] transition-colors peer-checked:bg-[#111214] peer-focus-visible:ring-4 peer-focus-visible:ring-[#C8173F]/30 after:absolute after:left-[3px] after:top-[3px] after:size-[22px] after:rounded-full after:bg-white after:shadow-[0_1px_3px_rgba(17,18,20,0.3)] after:transition-transform peer-checked:after:translate-x-5"

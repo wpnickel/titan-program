@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { ui } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { CardForm } from "../card-form";
+import { defaultSaleDate } from "@/lib/sale-date";
 import { defaultMonth, loadFormLists } from "../load";
 
 export const instant = false;
@@ -13,6 +14,7 @@ export default async function NewCardPage({ searchParams }: { searchParams: Prom
   const lists = await loadFormLists();
   const canEnter = lists.reps.length > 0 && lists.months.length > 0;
   const today = new Date().toISOString().slice(0, 10);
+  const entryMonth = month && lists.months.includes(month) ? month : defaultMonth(lists.months);
 
   return (
     <AppShell profile={profile}>
@@ -21,8 +23,8 @@ export default async function NewCardPage({ searchParams }: { searchParams: Prom
           <CardForm
             {...lists}
             initial={{
-              submitted: false, rep_id: lists.reps.length === 1 ? lists.reps[0]!.id : "", entry_month: month && lists.months.includes(month) ? month : defaultMonth(lists.months),
-              sale_date: today, business_name: "", zip_code: "", industry_id: "", customer_type: "existing", addendum: false,
+              submitted: false, rep_id: lists.reps.length === 1 ? lists.reps[0]!.id : "", entry_month: entryMonth,
+              sale_date: defaultSaleDate(entryMonth, today), business_name: "", zip_code: "", industry_id: "", customer_type: "existing", addendum: false,
               contract_number: "", term_months: "", install_amount: "", rmr_amount: "", comments: "", quantities: {},
               lead_source_ids: [], files: [],
             }}

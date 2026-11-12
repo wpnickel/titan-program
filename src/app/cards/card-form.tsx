@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { WarningDialog } from "@/components/dialog";
 import { Pill, ui } from "@/components/ui";
+import { defaultSaleDate } from "@/lib/sale-date";
 import {
   CUSTOMER_TYPES, MAX_UPLOAD_BYTES, UPLOAD_TCV, money, needsUpload, newLogoChecks, previewPoints, tcvOf,
   type CardPayload, type CustomerType, type FileInfo, type Option, type ProductInfo, type RepOption,
@@ -80,6 +81,12 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
   const [sources, setSources] = useState(new Set(initial.lead_source_ids));
   const [contract, setContract] = useState(initial.contract_number);
   const [saleDate, setSaleDate] = useState(initial.sale_date);
+  // Until the date of sale is typed in, a new card's date follows the entry month (see defaultSaleDate).
+  const [saleDateChosen, setSaleDateChosen] = useState(Boolean(initial.id));
+  const changeMonth = (m: string) => {
+    setMonth(m);
+    if (!saleDateChosen) setSaleDate(defaultSaleDate(m, new Date().toISOString().slice(0, 10)));
+  };
   const [addendum, setAddendum] = useState(initial.addendum);
   const [term, setTerm] = useState(initial.term_months);
   const [install, setInstall] = useState(initial.install_amount);
@@ -261,7 +268,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
                 </select>
               </div>
               <div className="min-w-[240px] flex-1">
-                <Segmented label="Entry month" value={month} onChange={setMonth}
+                <Segmented label="Entry month" value={month} onChange={changeMonth}
                   options={[...months].reverse().map((m, _i, all) => ({ value: m, label: monthName(m, new Set(all.map((x) => x.slice(0, 4))).size > 1) }))} />
               </div>
             </div>
@@ -314,7 +321,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
               </div>
               <div className="min-w-[180px] flex-[1_1_200px]">
                 {label("dos", "Date of sale")}
-                <input id="dos" type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className={ui.input} />
+                <input id="dos" type="date" value={saleDate} onChange={(e) => { setSaleDate(e.target.value); setSaleDateChosen(true); }} className={ui.input} />
                 {isLate && <p className="mt-1.5 text-xs font-semibold text-[#9E1031]">This sale is before {monthName(month)}, so it will be flagged as a late entry.</p>}
               </div>
               <div className="min-w-[180px] flex-[1_1_200px]">

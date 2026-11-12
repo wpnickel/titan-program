@@ -5,12 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type IconKey = "home" | "cards" | "audit" | "admin";
+type IconKey = "home" | "cards" | "reports" | "audit" | "admin";
 export type NavItem = { label: string; href: string; icon: IconKey; badge?: number };
 
 const ICONS: Record<IconKey, React.ReactNode> = {
   home: <path d="M4 11l8-7 8 7M6 10v9h4v-5h4v5h4v-9" />,
   cards: <><rect x="4" y="5" width="16" height="14" rx="2.5" /><path d="M8 10h8M8 14h5" /></>,
+  reports: <><path d="M5 20V10M12 20V4M19 20v-7" /><path d="M3 20h18" /></>,
   audit: <><path d="M5 12.5l4.5 4.5L19 7" /><rect x="3.5" y="3.5" width="17" height="17" rx="3.5" /></>,
   admin: <><circle cx="12" cy="12" r="3" /><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /></>,
 };

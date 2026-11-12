@@ -15,7 +15,7 @@ const TABS = [
   { key: "cronus", label: "Cronus Trip", group: "ytd" },
 ];
 
-export default async function LeaderboardsPage({ searchParams }: { searchParams: Promise<{ board?: string; month?: string }> }) {
+export default async function LeaderboardsPage({ searchParams }: { searchParams: Promise<{ board?: string; month?: string; scope?: string }> }) {
   const profile = await requireUser();
   const sp = await searchParams;
   const supabase = await createClient();
@@ -25,7 +25,10 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
   // Everyone sees finalized months. The super admin can also preview a month that is still open or in audit.
   const months = ((monthRows ?? []) as { month_start: string; status: string }[]).filter((m) => m.status === "finalized" || isAdmin);
   const month = months.find((m) => m.month_start === sp.month) ?? months.find((m) => m.status === "finalized") ?? months[0];
-  const tab = TABS.find((t) => t.key === sp.board) ?? TABS[0]!;
+  const { data: secAccess } = await supabase.rpc("securitas_access");
+  const securitas = sp.scope === "securitas" && secAccess === true;
+  const tabs = securitas ? TABS.filter((t) => t.key !== "cronus") : TABS;
+  const tab = tabs.find((t) => t.key === sp.board) ?? tabs[0]!;
   const preview = month && month.status !== "finalized";
 
   let rows: BoardRow[] = [], cronus: CronusRow[] = [];
@@ -34,13 +37,13 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
       const { data } = await supabase.rpc("cronus_trip", { p_month: month.month_start });
       cronus = (data ?? []) as CronusRow[];
     } else {
-      const { data } = await supabase.rpc("board", { p_kind: tab.group === "ytd" ? "ytd" : "month", p_month: month.month_start });
+      const { data } = await supabase.rpc(securitas ? "securitas_board" : "board", { p_kind: tab.group === "ytd" ? "ytd" : "month", p_month: month.month_start });
       rows = (data ?? []) as BoardRow[];
     }
   }
   const mine = profile.rep_id;
   const cat = CATEGORIES.find((c) => c.key === tab.key);
-  const href = (board: string, m = month?.month_start) => `/leaderboards?board=${board}${m ? `&month=${m}` : ""}`;
+  const href = (board: string, m = month?.month_start, scope = securitas ? "securitas" : "") => `/leaderboards?board=${board}${m ? `&month=${m}` : ""}${scope ? `&scope=${scope}` : ""}`;
 
   const title = tab.key === "supreme" ? "Supreme Titan" : tab.key === "cronus" ? "Cronus Trip" : tab.key === "overall" ? "Overall" : cat!.title;
   const sub = !month ? "" : tab.group === "ytd"
@@ -51,14 +54,26 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
     <AppShell profile={profile}>
       <main className="mx-auto flex max-w-[1296px] flex-col gap-6 px-4 py-8 sm:px-8">
         <div className="flex flex-wrap items-baseline gap-3.5">
-          <h1 className="text-[30px] font-extrabold tracking-tight">Leaderboards</h1>
+          <h1 className="text-[30px] font-extrabold tracking-tight">{securitas ? "Securitas leaderboards" : "Leaderboards"}</h1>
+          {securitas && <Pill tone="dark">Securitas only</Pill>}
           {preview && <Pill tone="amber">Preview: this month is not finalized</Pill>}
           <div className="flex-1" />
           <Link href="/" className="text-sm font-semibold !text-[#C8173F] hover:underline">← Home</Link>
         </div>
 
+        {secAccess === true && (
+          <nav aria-label="Leaderboard group" className="flex gap-1.5">
+            {[{ key: "", label: "Company" }, { key: "securitas", label: "Securitas" }].map((g) => (
+              <Link key={g.key} href={href(tab.key === "cronus" && g.key ? "rmr" : tab.key, month?.month_start, g.key)}
+                className={`rounded-lg px-3.5 py-1.5 text-[13px] font-bold ${(securitas ? "securitas" : "") === g.key ? "bg-[#C8173F] !text-white" : "border border-[#CFD1D6] bg-white !text-[#3A3D42] hover:border-[#111214]"}`}>
+                {g.label}
+              </Link>
+            ))}
+          </nav>
+        )}
+
         <nav aria-label="Board" className="flex flex-wrap gap-1.5">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <Link key={t.key} href={href(t.key)}
               className={`rounded-full px-4 py-2 text-sm font-semibold ${t.key === tab.key ? "bg-[#111214] !text-white" : "border border-[#CFD1D6] bg-white !text-[#3A3D42] hover:border-[#111214]"}`}>
               {t.label}
@@ -118,7 +133,7 @@ export default async function LeaderboardsPage({ searchParams }: { searchParams:
             <p className="border-t border-[#EEEFF1] px-6 py-3 text-xs leading-relaxed text-[#5B5F66]">
               {tab.key === "cronus"
                 ? "Ten spots from the year-to-date rankings: the Supreme Titan leader, the top 2 in each category, then the best Securitas rep. Anyone already picked is skipped."
-                : "A rep with nothing in a category has no rank there. Ties go to higher RMR, then more new logos, then more points; reps still tied share the rank. Only reps ranked in all four categories are ranked overall."}
+                : "A rep with nothing in a category has no rank there. Ties are broken in the program's tie-breaker order, and reps still tied share the rank. Only reps ranked in all four categories are ranked overall."}
             </p>
           </section>
         )}

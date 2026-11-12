@@ -12,7 +12,7 @@ export function RankChip({ rank, size = 30 }: { rank: number | null; size?: numb
 }
 
 /** A category board on the landing page: the top 3 and a link to every rep. */
-export function CategoryCard({ cat, rows, month, mine }: { cat: Category; rows: BoardRow[]; month: string; mine: string | null }) {
+export function CategoryCard({ cat, rows, month, mine, scope }: { cat: Category; rows: BoardRow[]; month: string; mine: string | null; scope?: string }) {
   const top = ordered(rows, cat.rank).slice(0, 3);
   return (
     <article className="flex min-w-0 flex-col gap-3.5 rounded-[18px] border border-[#E6E7EA] bg-white p-[22px]">
@@ -21,7 +21,7 @@ export function CategoryCard({ cat, rows, month, mine }: { cat: Category; rows: 
           <div className="text-xs font-bold tracking-[0.08em] text-[#C8173F]">{cat.tag}</div>
           <h2 className="mt-0.5 text-xl font-extrabold">{cat.title}</h2>
         </div>
-        <Link href={`/leaderboards?board=${cat.key}&month=${month}`} className="whitespace-nowrap text-[13px] font-semibold !text-[#C8173F] hover:underline">Full results →</Link>
+        <Link href={`/leaderboards?board=${cat.key}&month=${month}${scope ? `&scope=${scope}` : ""}`} className="whitespace-nowrap text-[13px] font-semibold !text-[#C8173F] hover:underline">Full results →</Link>
       </div>
       {top.length === 0 ? (
         <p className="border-t border-[#EEEFF1] pt-3 text-sm text-[#5B5F66]">No one is ranked here yet.</p>

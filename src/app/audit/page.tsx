@@ -136,7 +136,11 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                   <div className="flex flex-col gap-2.5">
                     <div className="h-2 overflow-hidden rounded bg-[#3A3D42]"><div className="h-full bg-white" style={{ width: `${pct}%` }} /></div>
                     <div className="text-[13px] text-[#C9CBD0]">{m.reviewed} of {m.flagged} flagged cards reviewed</div>
-                    <div className="flex flex-wrap gap-2"><MonthControls month={m.month_start} name={monthName(m.month_start)} kind="finalize" unreviewed={m.flagged - m.reviewed} dark /></div>
+                    <div className="flex flex-wrap gap-2"><MonthControls month={m.month_start} name={monthName(m.month_start)} kind="finalize" unreviewed={m.flagged - m.reviewed} dark />
+                      {!all.some((x) => x.month_start > m.month_start && x.status !== "open") && (
+                        <MonthControls month={m.month_start} name={monthName(m.month_start)} kind="cancel" unreviewed={0} dark />
+                      )}
+                    </div>
                   </div>
                 )}
                 {m.status === "open" && !blocked && (

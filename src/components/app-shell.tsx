@@ -20,6 +20,7 @@ export async function AppShell({ profile, children }: { profile: Profile; childr
   const items: NavItem[] = [
     { label: "Home", href: "/", icon: "home" },
     { label: "Tally cards", href: "/cards", icon: "cards" },
+    ...(isAdmin || profile.can_report ? [{ label: "Reports", href: "/reports", icon: "reports" as const }] : []),
     ...(isAdmin ? [{ label: "Audit", href: "/audit", icon: "audit" as const, badge: unread }, { label: "Admin", href: "/admin/users", icon: "admin" as const }] : []),
   ];
   return (

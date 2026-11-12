@@ -19,3 +19,11 @@ export function sendLoginCode(to: string, code: string) {
     `Your Titan Program sign-in code is ${code}.\n\nIt expires in 10 minutes. If you did not try to sign in, you can ignore this email.`,
   );
 }
+
+export function sendInvite(to: string, firstName: string, link: string) {
+  return send(
+    to,
+    "You're invited to the SNDA Sales Titan Program",
+    `Hi ${firstName},\n\nYou have been invited to the SNDA Sales Titan Program. Use this link to set your password:\n\n${link}\n\nThe link works once and expires, so use it soon. After setting your password, sign in with your email and password. We will email you a 6-digit code each time you sign in on a new device.\n\nIf you were not expecting this, you can ignore this email.`,
+  );
+}

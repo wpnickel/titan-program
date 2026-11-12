@@ -98,7 +98,7 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
                           </span>
                         </td>
                         <td className="px-3 py-3">
-                          {r.points > 0 ? <Pill tone="crimson">{r.points} {r.points === 1 ? "pt" : "pts"}</Pill> : <Pill tone="light">No points</Pill>}
+                          {r.points > 0 ? <Pill tone="green">{r.points} {r.points === 1 ? "pt" : "pts"}</Pill> : <Pill tone="light">No points</Pill>}
                         </td>
                         <td className="px-3 py-3 text-right tabular-nums">{money(Number(r.tcv))}</td>
                         <td className="px-5 py-3">

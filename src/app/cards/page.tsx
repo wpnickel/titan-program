@@ -3,7 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { Pill, ui } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { TYPE_LABELS, money, type CustomerType } from "@/lib/cards";
+import { TYPE_LABELS, money, needsUpload, type CustomerType } from "@/lib/cards";
 
 export const instant = false;
 
@@ -25,7 +25,7 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
   const { data: cards } = month
     ? await supabase
         .from("tally_cards")
-        .select("id, business_name, sale_date, customer_type, addendum, points, is_new_logo, is_late_entry, submitted, tcv, reps(first_name, last_name), dealerships(name)")
+        .select("id, business_name, sale_date, customer_type, addendum, points, is_new_logo, is_late_entry, submitted, tcv, term_months, tally_card_files(id), reps(first_name, last_name), dealerships(name)")
         .eq("entry_month", month.month_start).is("deleted_at", null)
         .order("sale_date", { ascending: false }).order("created_at", { ascending: false }).limit(500)
     : { data: [] };
@@ -65,7 +65,7 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
             <p className="px-5 py-10 text-center text-sm text-[#5B5F66]">No tally cards in {month ? monthName(month.month_start) : "this month"} yet.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px] text-left text-sm">
+              <table className="w-full min-w-[980px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-[#EEEFF1] text-xs font-bold tracking-wide text-[#5B5F66]">
                     <th className="px-5 py-3">Business</th>
@@ -73,9 +73,9 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
                     {dealerships.size > 1 && <th className="px-3 py-3">Dealership</th>}
                     <th className="px-3 py-3">Sold</th>
                     <th className="px-3 py-3">Type</th>
-                    <th className="px-3 py-3 text-right">Points</th>
+                    <th className="px-3 py-3">Points</th>
                     <th className="px-3 py-3 text-right">TCV</th>
-                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Flags</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -87,14 +87,23 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
                         <td className="px-3 py-3">{rep.first_name} {rep.last_name}</td>
                         {dealerships.size > 1 && <td className="px-3 py-3 text-[#5B5F66]">{(r.dealerships as unknown as { name: string }).name}</td>}
                         <td className="px-3 py-3 tabular-nums text-[#5B5F66]">{new Date(`${r.sale_date}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}</td>
-                        <td className="px-3 py-3">{TYPE_LABELS[r.customer_type as CustomerType]}{r.addendum ? " · addendum" : ""}</td>
-                        <td className="px-3 py-3 text-right font-bold tabular-nums">{r.points}</td>
+                        <td className="px-3 py-3">
+                          <span className="flex flex-wrap gap-1.5">
+                            <Pill tone={r.customer_type === "new_logo" ? "dark" : r.customer_type === "residential" ? "outline" : "light"}>{TYPE_LABELS[r.customer_type as CustomerType]}</Pill>
+                            {r.addendum && <Pill tone="outline">Addendum</Pill>}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          {r.points > 0 ? <Pill tone="crimson">{r.points} {r.points === 1 ? "pt" : "pts"}</Pill> : <Pill tone="light">No points</Pill>}
+                        </td>
                         <td className="px-3 py-3 text-right tabular-nums">{money(Number(r.tcv))}</td>
                         <td className="px-5 py-3">
                           <span className="flex flex-wrap gap-1.5">
                             {!r.submitted && <Pill tone="outline">Draft</Pill>}
-                            {r.is_new_logo && <Pill tone="dark">New logo</Pill>}
-                            {r.is_late_entry && <Pill tone="crimson">Late</Pill>}
+                            {r.is_late_entry && <Pill tone="crimson">Late entry</Pill>}
+                            {r.term_months < 12 && <Pill tone="amber">Under 12 months</Pill>}
+                            {r.customer_type === "new_logo" && !r.addendum && !r.is_new_logo && r.term_months >= 12 && <Pill tone="amber">Not counted as new logo</Pill>}
+                            {needsUpload(r.customer_type as CustomerType, Number(r.tcv)) && r.tally_card_files.length === 0 && <Pill tone="amber">Needs PDF</Pill>}
                           </span>
                         </td>
                       </tr>

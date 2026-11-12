@@ -2,10 +2,15 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { emailPendingAlerts } from "@/lib/alerts";
 import { MAX_UPLOAD_BYTES, type CardPayload } from "@/lib/cards";
+
+/** Send any late-sale alert emails after the response goes out, so entering a card is never slowed or broken by email. */
+const sendAlertsLater = () => after(async () => { try { await emailPendingAlerts(); } catch { /* alerts stay queued in the app */ } });
 
 const BUCKET = "tally-uploads";
 
@@ -24,13 +29,16 @@ export async function saveCard(payload: CardPayload): Promise<{ id?: string; err
   };
   const { data, error } = await (await createClient()).rpc("save_tally_card", { p });
   if (error) return { error: friendly(error.message) };
+  sendAlertsLater();
   return { id: data as string };
 }
 
 export async function submitCard(id: string): Promise<{ error?: string }> {
   await requireUser();
   const { error } = await (await createClient()).rpc("submit_tally_card", { p_id: id });
-  return error ? { error: friendly(error.message) } : {};
+  if (error) return { error: friendly(error.message) };
+  sendAlertsLater();
+  return {};
 }
 
 export async function deleteCard(id: string): Promise<{ error?: string }> {

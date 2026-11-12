@@ -27,3 +27,7 @@ export function sendInvite(to: string, firstName: string, link: string) {
     `Hi ${firstName},\n\nYou have been invited to the SNDA Sales Titan Program. Use this link to set your password:\n\n${link}\n\nThe link works once and expires, so use it soon. After setting your password, sign in with your email and password. We will email you a 6-digit code each time you sign in on a new device.\n\nIf you were not expecting this, you can ignore this email.`,
   );
 }
+
+export function sendLateEntryAlert(to: string, message: string) {
+  return send(to, "Late sale entered on a tally card", `${message}\n\nOpen the Audit page in the Titan Program to review it.`);
+}

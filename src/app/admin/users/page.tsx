@@ -14,12 +14,14 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const { q = "", dealership = "", inactive } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: dealershipRows }, { data: repRows }, { data: profileRows }, { data: assignRows }] = await Promise.all([
+  const [{ data: dealershipRows }, { data: repRows }, { data: profileRows }, { data: assignRows }, { data: statusRows }] = await Promise.all([
     supabase.from("dealerships").select("id, name, active").order("name"),
     supabase.from("reps").select("id, first_name, last_name, dealership_id, active").order("last_name"),
     supabase.from("profiles").select("*").order("last_name").order("first_name"),
     supabase.from("profile_dealerships").select("profile_id, dealership_id"),
+    supabase.from("profile_status").select("profile_id, invited_at, last_login_at"),
   ]);
+  const statusById = new Map((statusRows ?? []).map((r) => [r.profile_id as string, r]));
 
   const dealerships = (dealershipRows ?? []).filter((d) => d.active).map((d) => ({ id: d.id, name: d.name }));
   const nameById = new Map((dealershipRows ?? []).map((d) => [d.id, d.name]));
@@ -35,7 +37,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     .map((p) => {
       const ids: string[] = p.scope === "assigned" ? assigned.get(p.id) ?? [] : p.dealership_id ? [p.dealership_id] : [];
       const where = p.scope === "all" ? "All dealerships" : ids.map((i) => nameById.get(i) ?? "Inactive dealership").join(", ") || "No dealership";
-      return { ...p, ids, where };
+      const st = statusById.get(p.id);
+      const status = st?.last_login_at ? "Active" : st?.invited_at ? "Invited" : "Not invited";
+      return { ...p, ids, where, status };
     })
     .filter((u) => (inactive === "1" ? true : u.active))
     .filter((u) => !dealership || u.ids.includes(dealership) || u.scope === "all")
@@ -90,6 +94,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   <span className="flex flex-wrap gap-1.5">
                     <Pill>{PRESET_LABELS[u.preset as Preset]}</Pill>
                     {u.title && <Pill tone="outline">{u.title}</Pill>}
+                    {u.status === "Not invited" && <Pill tone="crimson">Not invited</Pill>}
+                    {u.status === "Invited" && <Pill tone="outline">Invited</Pill>}
                     {!u.active && <Pill tone="outline">Inactive</Pill>}
                   </span>
                   <Chevron />
@@ -104,7 +110,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                       toggles, isSelf: u.id === me.id,
                     }}
                   />
-                  {u.active && u.id !== me.id && <div className="border-t border-[#EEEFF1] pt-4"><ResendInviteForm id={u.id} /></div>}
+                  {u.active && u.id !== me.id && <div className="border-t border-[#EEEFF1] pt-4"><ResendInviteForm id={u.id} invited={u.status !== "Not invited"} /></div>}
                 </div>
               </details>
             </li>
@@ -121,14 +127,14 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                 </span>
                 <span className="flex flex-wrap gap-1.5">
                   <Pill>Salesperson</Pill>
-                  <Pill tone="outline">No login</Pill>
+                  <Pill tone="crimson">Needs an email</Pill>
                   {!r.active && <Pill tone="outline">Inactive</Pill>}
                 </span>
                 <Chevron />
               </summary>
               <div className="flex flex-col gap-5 border-t border-[#EEEFF1] p-5">
                 <div>
-                  <h3 className="mb-3 text-[15px] font-extrabold">Give {r.first_name} a login</h3>
+                  <h3 className="mb-3 text-[15px] font-extrabold">Add an email for {r.first_name}</h3>
                   <UserForm
                     dealerships={dealerships}
                     reps={reps}

@@ -17,9 +17,11 @@ const hashToken = (token: string) => createHash("sha256").update(token).digest("
 
 /** Writes a line to the audit log for sign-in events. */
 export async function logAuth(userId: string | null, action: string, detail?: Record<string, unknown>) {
-  await createAdminClient()
-    .from("audit_log")
-    .insert({ actor_id: userId, table_name: "auth", row_key: userId, action, new_row: detail ?? null });
+  const db = createAdminClient();
+  await db.from("audit_log").insert({ actor_id: userId, table_name: "auth", row_key: userId, action, new_row: detail ?? null });
+  if (userId && action === "LOGIN") {
+    await db.from("profile_status").upsert({ profile_id: userId, last_login_at: new Date().toISOString() });
+  }
 }
 
 export async function issueCode(userId: string, email: string): Promise<{ ok: true } | { ok: false; error: string; tooSoon?: boolean }> {

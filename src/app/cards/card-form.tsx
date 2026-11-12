@@ -27,7 +27,7 @@ export type CardFormProps = {
 };
 
 type Step = "similar" | "short" | "residential";
-type Dialog = Step | "pdf" | "delete" | null;
+type Dialog = Step | "pdf" | "delete" | "saved" | null;
 
 const monthName = (iso: string, withYear = false) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "long", ...(withYear ? { year: "numeric" } : {}), timeZone: "UTC" });
@@ -175,7 +175,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
       } else {
         const r = await submitCard(id);
         if (r.error) setMessage({ kind: "error", text: r.error });
-        else { setSubmitted(true); router.push(`/cards?month=${month}`); return; }
+        else { setSubmitted(true); setDialog("saved"); setBusy(null); return; }
       }
     }
     setBusy(null);
@@ -484,6 +484,14 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
       <WarningDialog open={dialog === "pdf"} title="Only PDF files can be uploaded"
         secondary="Cancel" primary="Got it" onSecondary={() => setDialog(null)} onPrimary={() => setDialog(null)}>
         Convert the file to a PDF and add it again. You can attach as many PDFs as you need.
+      </WarningDialog>
+      <WarningDialog open={dialog === "saved"} tone="success" title="Tally card submitted"
+        secondary="Back to tally cards" primary="Add another tally card"
+        onSecondary={() => router.push(`/cards?month=${month}`)}
+        // A full page load on purpose: the address bar was changed behind the router's back after the first save, so a router push would keep this card's form state.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        onPrimary={() => window.location.assign(`/cards/new?month=${month}`)}>
+        {name.trim() || "The card"} was saved{points.total > 0 ? ` with ${points.total} Sonitrol ${points.total === 1 ? "point" : "points"}` : ""}. Would you like to enter another one?
       </WarningDialog>
       <WarningDialog open={dialog === "delete"} title="Delete this tally card?"
         secondary="Keep it" primary="Delete card" onSecondary={() => setDialog(null)} onPrimary={() => void confirmDelete()}>

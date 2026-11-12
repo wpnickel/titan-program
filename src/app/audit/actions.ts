@@ -36,6 +36,14 @@ export async function reopenMonth(month: string, reason: string): Promise<Result
   return { ok: true };
 }
 
+export async function cancelAudit(month: string, reason: string): Promise<Result> {
+  await requireSuperAdmin();
+  const { error } = await (await createClient()).rpc("cancel_audit", { p_month: month, p_reason: reason });
+  if (error) return { error: friendly(error.message) };
+  revalidatePath("/audit");
+  return { ok: true };
+}
+
 export type Adjustment = {
   cardId: string;
   reason: string;

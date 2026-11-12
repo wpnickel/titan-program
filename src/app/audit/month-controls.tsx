@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { WarningDialog } from "@/components/dialog";
-import { finalizeMonth, reopenMonth, startAudit } from "./actions";
+import { cancelAudit, finalizeMonth, reopenMonth, startAudit } from "./actions";
 
-type Kind = "start" | "finalize" | "reopen";
+type Kind = "start" | "finalize" | "reopen" | "cancel";
 
 /** The audit button and its confirmations. Each one acts on every dealership at once. */
 export function MonthControls({ month, name, kind, unreviewed, dark }: { month: string; name: string; kind: Kind; unreviewed: number; dark?: boolean }) {
@@ -15,17 +15,19 @@ export function MonthControls({ month, name, kind, unreviewed, dark }: { month: 
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const label = kind === "start" ? `Start ${name} audit` : kind === "finalize" ? `Finalize ${name}` : "Reopen for audit";
-  const btn = kind === "reopen"
+  const label = kind === "start" ? `Start ${name} audit` : kind === "finalize" ? `Finalize ${name}` : kind === "cancel" ? "Return to open" : "Reopen for audit";
+  const btn = kind === "cancel"
+    ? "h-[42px] cursor-pointer rounded-[10px] border border-white/60 bg-transparent px-4 text-sm font-bold text-white hover:bg-white/10"
+    : kind === "reopen"
     ? "h-[42px] cursor-pointer rounded-[10px] border border-[#111214] bg-white px-4 text-sm font-bold hover:bg-[#F5F5F6]"
     : kind === "start"
       ? "h-[42px] cursor-pointer rounded-[10px] bg-[#111214] px-4 text-sm font-extrabold text-white hover:bg-[#2A2C31]"
       : "h-[42px] cursor-pointer rounded-[10px] bg-[#C8173F] px-4 text-sm font-extrabold text-white hover:bg-[#9E1031]";
 
   function confirm() {
-    if (kind === "reopen" && !reason.trim()) { setError("Enter a reason for reopening."); return; }
+    if ((kind === "reopen" || kind === "cancel") && !reason.trim()) { setError(kind === "cancel" ? "Enter a reason for returning the month to open." : "Enter a reason for reopening."); return; }
     start(async () => {
-      const r = kind === "start" ? await startAudit(month) : kind === "finalize" ? await finalizeMonth(month) : await reopenMonth(month, reason);
+      const r = kind === "start" ? await startAudit(month) : kind === "finalize" ? await finalizeMonth(month) : kind === "cancel" ? await cancelAudit(month, reason) : await reopenMonth(month, reason);
       if (r.error) { setError(r.error); return; }
       setOpen(false); setError(null); setReason("");
       router.refresh();
@@ -44,10 +46,12 @@ export function MonthControls({ month, name, kind, unreviewed, dark }: { month: 
             {unreviewed > 0 && <b className="mt-2 block text-[#9E1031]">{unreviewed} flagged {unreviewed === 1 ? "card has" : "cards have"} not been reviewed yet.</b>}
           </>
         )}
-        {kind === "reopen" && (
+        {(kind === "reopen" || kind === "cancel") && (
           <>
-            Reopening puts {name} back in audit so you can edit it. The reason is saved to the audit log.
-            <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason" aria-label="Reason for reopening"
+            {kind === "reopen"
+              ? <>Reopening puts {name} back in audit so you can edit it. The reason is saved to the audit log.</>
+              : <>This unlocks {name} so dealerships can enter and edit cards again. Reviews and adjustments you made are kept. The month that opened when you started the audit stays open. The reason is saved to the audit log.</>}
+            <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason" aria-label={kind === "reopen" ? "Reason for reopening" : "Reason for returning to open"}
               className="mt-3 h-11 w-full rounded-[10px] border border-[#CFD1D6] px-3 text-sm font-medium outline-none focus:border-[#C8173F]" />
           </>
         )}

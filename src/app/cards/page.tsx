@@ -30,6 +30,10 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
         .order("sale_date", { ascending: false }).order("created_at", { ascending: false }).limit(500)
     : { data: [] };
   const rows = cards ?? [];
+  const { data: similarIds } = rows.length
+    ? await supabase.rpc("cards_with_similar_customer", { p_cards: rows.filter((r) => r.customer_type === "new_logo" && !r.addendum).map((r) => r.id) })
+    : { data: [] };
+  const similar = new Set((similarIds ?? []) as unknown as string[]);
   const dealerships = new Set(rows.map((r) => (r.dealerships as unknown as { name: string }).name));
   const totalPoints = rows.reduce((s, r) => s + r.points, 0);
   const canEnter = (reps ?? []).length > 0;
@@ -102,6 +106,7 @@ export default async function CardsPage({ searchParams }: { searchParams: Promis
                             {!r.submitted && <Pill tone="outline">Draft</Pill>}
                             {r.is_late_entry && <Pill tone="crimson">Late entry</Pill>}
                             {r.term_months < 12 && <Pill tone="amber">Under 12 months</Pill>}
+                            {similar.has(r.id) && <Pill tone="amber">Similar name</Pill>}
                             {r.customer_type === "new_logo" && !r.addendum && !r.is_new_logo && r.term_months >= 12 && <Pill tone="amber">Not counted as new logo</Pill>}
                             {needsUpload(r.customer_type as CustomerType, Number(r.tcv)) && r.tally_card_files.length === 0 && <Pill tone="amber">Needs PDF</Pill>}
                           </span>

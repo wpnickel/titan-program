@@ -41,7 +41,7 @@ function Section({ title, hint, open, children }: { title: string; hint?: string
  */
 export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision, facts, rules, rulesHint, activity, activityCount, current }: {
   cardId: string; locked: boolean; status: AuditStatus; savedNotes: string; needsDecision: boolean;
-  facts: ReactNode; rules: ReactNode; activity: ReactNode; activityCount: number; rulesHint: string;
+  facts: ReactNode; rules: ReactNode | null; activity: ReactNode; activityCount: number; rulesHint: string;
   current: { newLogo: boolean; customerType: CustomerType; points: number; overridden: boolean };
 }) {
   const router = useRouter();
@@ -210,7 +210,7 @@ export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision,
                 </div>
               </div>
             </Section>
-            <Section title="Rule checks" hint={rulesHint} open={needsDecision}>{rules}</Section>
+            {rules && <Section title="Rule checks" hint={rulesHint} open={needsDecision}>{rules}</Section>}
             <Section title="Activity" hint={`${activityCount} ${activityCount === 1 ? "entry" : "entries"}`}>{activity}</Section>
           </div>
         </fieldset>

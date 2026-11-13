@@ -203,7 +203,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                         )}
                       </div>
                     }
-                    rules={<RuleChecks checks={detail.checks} />}
+                    // The new logo checklist only shows for cards entered as a new logo.
+                    rules={detail.card.customer_type === "new_logo" ? <RuleChecks checks={detail.checks} /> : null}
                     activity={
                       <ul className="flex flex-col gap-2">
                         {detail.activity.map((l, n) => (

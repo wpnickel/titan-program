@@ -43,7 +43,7 @@ export function MonthControls({ month, name, kind, unreviewed, dark }: { month: 
         {kind === "finalize" && (
           <>
             This locks {name} for everyone, including you, and freezes its points and new logos so it counts toward the year-to-date boards.
-            {unreviewed > 0 && <b className="mt-2 block text-[#9E1031]">{unreviewed} flagged {unreviewed === 1 ? "card has" : "cards have"} not been reviewed yet.</b>}
+            {unreviewed > 0 && <b className="mt-2 block text-[#9E1031]">{unreviewed} {unreviewed === 1 ? "card has" : "cards have"} not been approved yet.</b>}
           </>
         )}
         {(kind === "reopen" || kind === "cancel") && (

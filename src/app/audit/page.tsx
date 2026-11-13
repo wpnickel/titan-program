@@ -59,7 +59,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   const { data: queueData } = month ? await supabase.rpc("audit_queue", { p_month: month.month_start }) : { data: [] };
   const queue = (queueData ?? []) as QueueRow[];
-  const visible = filter === "all" ? queue : filter === "waiting" ? queue.filter((q) => q.audit_status === "on_hold") : queue.filter((q) => q.reasons.includes(filter));
+  const visible = filter === "all" ? queue : filter === "waiting" ? queue.filter((q) => q.audit_status === "on_hold") : filter === "untagged" ? queue.filter((q) => q.reasons.length === 0) : queue.filter((q) => q.reasons.includes(filter));
   const selected = visible.find((q) => q.card_id === cardParam) ?? visible.find((q) => q.audit_status === "unreviewed") ?? visible[0];
 
   const base = (extra: Record<string, string>) => {
@@ -135,7 +135,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 {m.status === "in_audit" && (
                   <div className="flex flex-col gap-2.5">
                     <div className="h-2 overflow-hidden rounded bg-[#3A3D42]"><div className="h-full bg-white" style={{ width: `${pct}%` }} /></div>
-                    <div className="text-[13px] text-[#C9CBD0]">{m.reviewed} of {m.flagged} flagged cards reviewed{m.on_hold > 0 ? ` · ${m.on_hold} waiting for information` : ""}</div>
+                    <div className="text-[13px] text-[#C9CBD0]">{m.reviewed} of {m.flagged} cards audited{m.on_hold > 0 ? ` · ${m.on_hold} waiting for information` : ""}</div>
                     <div className="flex flex-wrap gap-2"><MonthControls month={m.month_start} name={monthName(m.month_start)} kind="finalize" unreviewed={m.flagged - m.reviewed} dark />
                       {!all.some((x) => x.month_start > m.month_start && x.status !== "open") && (
                         <MonthControls month={m.month_start} name={monthName(m.month_start)} kind="cancel" unreviewed={0} dark />
@@ -159,17 +159,17 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         {month && (
           <section className="flex flex-wrap items-start gap-5">
             <aside className={`${ui.card} flex min-w-0 max-w-[340px] flex-[1_1_300px] flex-col gap-3.5 p-[18px]`}>
-              <h2 className="text-[17px] font-extrabold">Needs review · {monthName(month.month_start)}</h2>
+              <h2 className="text-[17px] font-extrabold">Cards to audit · {monthName(month.month_start)}</h2>
               <div className="flex flex-wrap gap-1.5">
-                {[["all", "All"], ["waiting", "Waiting for information"], ...Object.entries(REASONS).map(([k, v]) => [k, v.filter])].map(([k, label]) => (
+                {[["all", "All"], ["waiting", "Waiting for information"], ["untagged", "No tags"], ...Object.entries(REASONS).map(([k, v]) => [k, v.filter])].map(([k, label]) => (
                   <Link key={k} href={`/audit?month=${month.month_start}${k === "all" ? "" : `&filter=${k}`}`} aria-current={filter === k ? "true" : undefined}
                     className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold ${filter === k ? "border-[#111214] bg-[#111214] !text-white" : "border-[#CFD1D6] bg-white !text-[#3A3D42] hover:border-[#111214]"}`}>
-                    {label}{k === "all" ? ` (${queue.length})` : k === "waiting" ? ` (${queue.filter((q) => q.audit_status === "on_hold").length})` : ` (${queue.filter((q) => q.reasons.includes(k)).length})`}
+                    {label}{k === "all" ? ` (${queue.length})` : k === "waiting" ? ` (${queue.filter((q) => q.audit_status === "on_hold").length})` : k === "untagged" ? ` (${queue.filter((q) => q.reasons.length === 0).length})` : ` (${queue.filter((q) => q.reasons.includes(k)).length})`}
                   </Link>
                 ))}
               </div>
               {visible.length === 0 ? (
-                <p className="py-6 text-center text-sm text-[#5B5F66]">Nothing to review here.</p>
+                <p className="py-6 text-center text-sm text-[#5B5F66]">Nothing to audit here.</p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {visible.map((q) => (
@@ -252,7 +252,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
               </>
             ) : (
               <p className={`${ui.card} min-w-0 flex-[3_1_520px] p-10 text-center text-sm text-[#5B5F66]`}>
-                {queue.length === 0 ? `No cards in ${monthName(month.month_start)} need review.` : "Choose a card from the list."}
+                {queue.length === 0 ? `No submitted cards in ${monthName(month.month_start)} yet.` : "Choose a card from the list."}
               </p>
             )}
           </section>

@@ -69,7 +69,7 @@ select t.eq('an empty note on an untouched card does nothing', $q$select count(*
 
 -- Waiting cards still warn at finalize time (they count as not reviewed) ------------------------------
 select public.audit_save_notes(t.cid('resi'), 'Waiting for PDF', true);
-select t.eq('flagged minus reviewed still includes waiting cards', $q$select flagged - reviewed from public.audit_months() where month_start = '2026-10-01'$q$, 3);
+select t.eq('cards left to audit still include waiting cards', $q$select flagged - reviewed from public.audit_months() where month_start = '2026-10-01'$q$, 4);
 select t.as_owner();
 
 -- Finalized months are locked ---------------------------------------------------------------------------

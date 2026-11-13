@@ -46,13 +46,13 @@ select t.as_owner();
 
 -- Queue -----------------------------------------------------------------------------------------------
 select t.as_user('f0000000-0000-0000-0000-000000000001');
-select t.eq('queue holds the cards that need a look', $q$select count(*) from public.audit_queue('2026-10-01')$q$, 4);
-select t.eq('plain cards are not queued', $q$select count(*) from public.audit_queue('2026-10-01') where business_name = 'Plain Co'$q$, 0);
+select t.eq('queue holds every submitted card', $q$select count(*) from public.audit_queue('2026-10-01')$q$, 5);
+select t.eq('plain cards are queued with no tags', $q$select count(*) from public.audit_queue('2026-10-01') where business_name = 'Plain Co' and cardinality(reasons) = 0$q$, 1);
 select t.eq('new logos are queued as new logos', $q$select count(*) from public.audit_queue('2026-10-01') where business_name = 'Riverside Dental' and 'new_logo' = any (reasons)$q$, 1);
 select t.eq('short contracts are queued', $q$select count(*) from public.audit_queue('2026-10-01') where 'under_12' = any (reasons)$q$, 1);
 select t.eq('late sales are queued', $q$select count(*) from public.audit_queue('2026-10-01') where 'late_entry' = any (reasons)$q$, 1);
 select t.eq('residential without a PDF is queued for both reasons', $q$select count(*) from public.audit_queue('2026-10-01') where 'residential' = any (reasons) and 'missing_pdf' = any (reasons)$q$, 1);
-select t.eq('everything starts Unreviewed', $q$select count(*) from public.audit_queue('2026-10-01') where audit_status = 'unreviewed'$q$, 4);
+select t.eq('everything starts Unreviewed', $q$select count(*) from public.audit_queue('2026-10-01') where audit_status = 'unreviewed'$q$, 5);
 
 -- Review ---------------------------------------------------------------------------------------------
 select public.audit_approve(t.cid('short'));

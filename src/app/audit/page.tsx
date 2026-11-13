@@ -193,11 +193,20 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                             </div>
                           ))}
                         </div>
-                        {detail.products.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 text-[13px]">
-                            {detail.products.map((p) => <span key={p} className="rounded-full border border-[#E6E7EA] px-3 py-1 font-semibold">{p}</span>)}
-                          </div>
-                        )}
+                        <div>
+                          <div className="mb-1.5 text-[13px] font-semibold text-[#5B5F66]">Products sold</div>
+                          {detail.products.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5 text-sm">
+                              {detail.products.map((p) => (
+                                <span key={p.label} className="inline-flex items-center gap-1.5 rounded-full border border-[#111214] bg-white px-3 py-1 font-bold">
+                                  {p.label}{p.quantity > 1 && <span className="rounded-full bg-[#111214] px-1.5 text-xs text-white">× {p.quantity}</span>}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm font-semibold text-[#9E1031]">No products are marked as sold on this card.</p>
+                          )}
+                        </div>
                         {detail.audit?.reason && (
                           <p className="rounded-lg bg-[#FFF4DC] px-3 py-2 text-sm text-[#7A4B00]"><b>Audit note:</b> {detail.audit.reason}</p>
                         )}
@@ -249,7 +258,7 @@ async function loadDetail(supabase: Awaited<ReturnType<typeof createClient>>, id
     card, audit,
     rep: `${rep.first_name} ${rep.last_name}`,
     dealership: (card.dealerships as unknown as { name: string }).name,
-    products: lines.filter((l) => l.quantity > 0).map((l) => `${l.products.label.replace(/\s*\(.*\)$/, "")}${l.quantity > 1 ? ` × ${l.quantity}` : ""}`),
+    products: lines.filter((l) => l.quantity > 0).map((l) => ({ label: l.products.label.replace(/\s*\(.*\)$/, ""), quantity: l.quantity })),
     files: card.tally_card_files as { id: string; file_name: string }[],
     checks: newLogoChecks({
       type: card.customer_type as CustomerType, addendum: card.addendum, qualifying,

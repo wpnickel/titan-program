@@ -8,7 +8,7 @@ import { cancelAudit, finalizeMonth, reopenMonth, startAudit } from "./actions";
 type Kind = "start" | "finalize" | "reopen" | "cancel";
 
 /** The audit button and its confirmations. Each one acts on every dealership at once. */
-export function MonthControls({ month, name, kind, unreviewed, dark }: { month: string; name: string; kind: Kind; unreviewed: number; dark?: boolean }) {
+export function MonthControls({ month, name, kind, unreviewed }: { month: string; name: string; kind: Kind; unreviewed: number }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -17,12 +17,12 @@ export function MonthControls({ month, name, kind, unreviewed, dark }: { month: 
 
   const label = kind === "start" ? `Start ${name} audit` : kind === "finalize" ? `Finalize ${name}` : kind === "cancel" ? "Return to open" : "Reopen for audit";
   const btn = kind === "cancel"
-    ? "h-[42px] cursor-pointer rounded-[10px] border border-white/60 bg-transparent px-4 text-sm font-bold text-white hover:bg-white/10"
+    ? "h-10 cursor-pointer rounded-[10px] border border-[#CFD1D6] bg-white px-4 text-[13px] font-bold text-[#3A3D42] hover:bg-[#F5F5F6]"
     : kind === "reopen"
-    ? "h-[42px] cursor-pointer rounded-[10px] border border-[#111214] bg-white px-4 text-sm font-bold hover:bg-[#F5F5F6]"
+    ? "h-10 cursor-pointer rounded-[10px] border border-[#111214] bg-white px-4 text-[13px] font-bold hover:bg-[#F5F5F6]"
     : kind === "start"
-      ? "h-[42px] cursor-pointer rounded-[10px] bg-[#111214] px-4 text-sm font-extrabold text-white hover:bg-[#2A2C31]"
-      : "h-[42px] cursor-pointer rounded-[10px] bg-[#C8173F] px-4 text-sm font-extrabold text-white hover:bg-[#9E1031]";
+      ? "h-10 cursor-pointer rounded-[10px] bg-[#111214] px-4 text-[13px] font-extrabold text-white hover:bg-[#2A2C31]"
+      : "h-10 cursor-pointer rounded-[10px] bg-[#111214] px-[18px] text-[13px] font-extrabold text-white hover:bg-[#2A2C31]";
 
   function confirm() {
     if ((kind === "reopen" || kind === "cancel") && !reason.trim()) { setError(kind === "cancel" ? "Enter a reason for returning the month to open." : "Enter a reason for reopening."); return; }
@@ -36,7 +36,7 @@ export function MonthControls({ month, name, kind, unreviewed, dark }: { month: 
 
   return (
     <>
-      <button type="button" onClick={() => { setError(null); setOpen(true); }} className={btn} data-dark={dark}>{label}</button>
+      <button type="button" onClick={() => { setError(null); setOpen(true); }} className={btn}>{label}</button>
       <WarningDialog open={open} title={label + "?"} secondary="Cancel" primary={pending ? "Working…" : label}
         onSecondary={() => setOpen(false)} onPrimary={confirm}>
         {kind === "start" && <>This locks {name} for every dealership. Only you can edit its cards after that, and the next month opens for entry.</>}

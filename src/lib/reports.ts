@@ -4,7 +4,7 @@ export type ReportRow = {
   id: string; entry_month: string; sale_date: string; created_at: string; dealership_id: string; dealership: string; rep_id: string; rep: string;
   business_name: string; contract_number: string | null; zip_code: string | null; industry_id: string | null; industry: string | null;
   customer_type: CustomerType; addendum: boolean; term_months: number; install_amount: number; rmr_amount: number; tcv: number; points: number;
-  is_new_logo: boolean; is_late_entry: boolean; audit_status: "unreviewed" | "approved" | "adjusted" | null; comments: string | null;
+  is_new_logo: boolean; is_late_entry: boolean; audit_status: "unreviewed" | "approved" | "adjusted" | "on_hold" | null; comments: string | null;
   products: string | null; product_ids: string[]; lead_sources: string | null; lead_source_ids: string[]; files: number;
 };
 
@@ -71,7 +71,7 @@ export function applyFilters(q: any, p: Params, isAdmin: boolean) {
   const nl = yesNo(one(p, "newlogo")); if (nl !== undefined) q = q.eq("is_new_logo", nl);
   const ad = yesNo(one(p, "addendum")); if (ad !== undefined) q = q.eq("addendum", ad);
   const late = yesNo(one(p, "late")); if (late !== undefined) q = q.eq("is_late_entry", late);
-  const audit = one(p, "audit"); if (isAdmin && audit && ["unreviewed", "approved", "adjusted"].includes(audit)) q = q.eq("audit_status", audit);
+  const audit = one(p, "audit"); if (isAdmin && audit && ["unreviewed", "approved", "adjusted", "on_hold"].includes(audit)) q = q.eq("audit_status", audit);
   const ranges: [string, string, string][] = [["term_months", "term_min", "term_max"], ["rmr_amount", "rmr_min", "rmr_max"], ["install_amount", "install_min", "install_max"]];
   for (const [col, lo, hi] of ranges) {
     const a = num(one(p, lo)), b = num(one(p, hi));
@@ -91,7 +91,7 @@ export function sortOf(p: Params): { key: string; asc: boolean } {
 export const pageOf = (p: Params) => Math.max(1, Math.floor(Number(one(p, "page")) || 1));
 
 const dateFmt = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", { ...opts, timeZone: "UTC" });
-export const AUDIT_LABELS = { unreviewed: "Unreviewed", approved: "Approved", adjusted: "Adjusted" } as const;
+export const AUDIT_LABELS = { unreviewed: "Unreviewed", approved: "Approved", adjusted: "Adjusted", on_hold: "Waiting for information" } as const;
 
 /** What a cell shows on screen. */
 export function display(c: Column, row: ReportRow): string {

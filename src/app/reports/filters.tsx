@@ -11,7 +11,7 @@ export type FilterLists = {
 
 const TYPES: Opt[] = [{ value: "existing", label: "Existing" }, { value: "new_logo", label: "New logo" }, { value: "residential", label: "Residential" }];
 const YES_NO: Opt[] = [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
-const AUDIT: Opt[] = [{ value: "unreviewed", label: "Unreviewed" }, { value: "approved", label: "Approved" }, { value: "adjusted", label: "Adjusted" }];
+const AUDIT: Opt[] = [{ value: "unreviewed", label: "Unreviewed" }, { value: "approved", label: "Approved" }, { value: "adjusted", label: "Adjusted" }, { value: "on_hold", label: "Waiting for information" }];
 
 function Select({ name, label, options, value, any = "Any" }: { name: string; label: string; options: Opt[]; value: string; any?: string }) {
   return (

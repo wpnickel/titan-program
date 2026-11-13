@@ -64,6 +64,15 @@ export async function adjustCard(a: Adjustment): Promise<Result> {
   return { ok: true };
 }
 
+/** Save notes on a card. With hold, the card is set aside as "waiting for information" (not approved). */
+export async function saveNotes(cardId: string, notes: string, hold: boolean): Promise<Result> {
+  await requireSuperAdmin();
+  const { error } = await (await createClient()).rpc("audit_save_notes", { p_card: cardId, p_notes: notes, p_hold: hold });
+  if (error) return { error: friendly(error.message) };
+  revalidatePath("/audit");
+  return { ok: true };
+}
+
 /** Mark a card approved, then go to the next card in the queue (or stay if there is none). */
 export async function approveCard(cardId: string, next: string): Promise<Result> {
   await requireSuperAdmin();

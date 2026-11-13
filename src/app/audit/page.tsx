@@ -12,10 +12,10 @@ import { ReviewPanel, RuleChecks } from "./review-panel";
 
 export const instant = false;
 
-type AuditMonth = { month_start: string; status: "open" | "in_audit" | "finalized"; audit_started_at: string | null; finalized_at: string | null; cards: number; flagged: number; reviewed: number };
+type AuditMonth = { month_start: string; status: "open" | "in_audit" | "finalized"; audit_started_at: string | null; finalized_at: string | null; cards: number; flagged: number; reviewed: number; on_hold: number };
 type QueueRow = {
   card_id: string; business_name: string; rep_name: string; dealership: string; sale_date: string; entry_month: string;
-  customer_type: CustomerType; addendum: boolean; points: number; is_new_logo: boolean; reasons: string[]; audit_status: "unreviewed" | "approved" | "adjusted";
+  customer_type: CustomerType; addendum: boolean; points: number; is_new_logo: boolean; reasons: string[]; audit_status: "unreviewed" | "approved" | "adjusted" | "on_hold"; notes: string | null;
 };
 
 const REASONS: Record<string, { filter: string; tag: string }> = {
@@ -27,7 +27,7 @@ const REASONS: Record<string, { filter: string; tag: string }> = {
   residential: { filter: "Residential", tag: "Residential" },
   missing_pdf: { filter: "Missing PDFs", tag: "Missing PDF" },
 };
-const STATUS_LABEL = { unreviewed: "Unreviewed", approved: "Approved", adjusted: "Adjusted" } as const;
+const STATUS_LABEL = { unreviewed: "Unreviewed", approved: "Approved", adjusted: "Adjusted", on_hold: "Waiting for information" } as const;
 
 const NY = "America/New_York";
 const monthName = (iso: string, year = false) =>
@@ -59,7 +59,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   const { data: queueData } = month ? await supabase.rpc("audit_queue", { p_month: month.month_start }) : { data: [] };
   const queue = (queueData ?? []) as QueueRow[];
-  const visible = filter === "all" ? queue : queue.filter((q) => q.reasons.includes(filter));
+  const visible = filter === "all" ? queue : filter === "waiting" ? queue.filter((q) => q.audit_status === "on_hold") : queue.filter((q) => q.reasons.includes(filter));
   const selected = visible.find((q) => q.card_id === cardParam) ?? visible.find((q) => q.audit_status === "unreviewed") ?? visible[0];
 
   const base = (extra: Record<string, string>) => {
@@ -135,7 +135,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 {m.status === "in_audit" && (
                   <div className="flex flex-col gap-2.5">
                     <div className="h-2 overflow-hidden rounded bg-[#3A3D42]"><div className="h-full bg-white" style={{ width: `${pct}%` }} /></div>
-                    <div className="text-[13px] text-[#C9CBD0]">{m.reviewed} of {m.flagged} flagged cards reviewed</div>
+                    <div className="text-[13px] text-[#C9CBD0]">{m.reviewed} of {m.flagged} flagged cards reviewed{m.on_hold > 0 ? ` · ${m.on_hold} waiting for information` : ""}</div>
                     <div className="flex flex-wrap gap-2"><MonthControls month={m.month_start} name={monthName(m.month_start)} kind="finalize" unreviewed={m.flagged - m.reviewed} dark />
                       {!all.some((x) => x.month_start > m.month_start && x.status !== "open") && (
                         <MonthControls month={m.month_start} name={monthName(m.month_start)} kind="cancel" unreviewed={0} dark />
@@ -161,10 +161,10 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             <aside className={`${ui.card} flex min-w-0 max-w-[340px] flex-[1_1_300px] flex-col gap-3.5 p-[18px]`}>
               <h2 className="text-[17px] font-extrabold">Needs review · {monthName(month.month_start)}</h2>
               <div className="flex flex-wrap gap-1.5">
-                {[["all", "All"], ...Object.entries(REASONS).map(([k, v]) => [k, v.filter])].map(([k, label]) => (
+                {[["all", "All"], ["waiting", "Waiting for information"], ...Object.entries(REASONS).map(([k, v]) => [k, v.filter])].map(([k, label]) => (
                   <Link key={k} href={`/audit?month=${month.month_start}${k === "all" ? "" : `&filter=${k}`}`} aria-current={filter === k ? "true" : undefined}
                     className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold ${filter === k ? "border-[#111214] bg-[#111214] !text-white" : "border-[#CFD1D6] bg-white !text-[#3A3D42] hover:border-[#111214]"}`}>
-                    {label}{k === "all" ? ` (${queue.length})` : ` (${queue.filter((q) => q.reasons.includes(k)).length})`}
+                    {label}{k === "all" ? ` (${queue.length})` : k === "waiting" ? ` (${queue.filter((q) => q.audit_status === "on_hold").length})` : ` (${queue.filter((q) => q.reasons.includes(k)).length})`}
                   </Link>
                 ))}
               </div>
@@ -178,12 +178,13 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                         className={`flex flex-col gap-1.5 rounded-[14px] border-2 px-3.5 py-3 !text-[#111214] ${q.card_id === selected?.card_id ? "border-[#111214] bg-white" : "border-[#E6E7EA] bg-[#FAFAFB] hover:border-[#B8BBC2]"}`}>
                         <span className="flex items-baseline justify-between gap-2">
                           <span className="text-sm font-bold">{q.business_name}</span>
-                          <span className={`whitespace-nowrap text-xs ${q.audit_status === "unreviewed" ? "text-[#5B5F66]" : q.audit_status === "approved" ? "font-bold text-[#1F7A3D]" : "font-bold text-[#7A4B00]"}`}>{STATUS_LABEL[q.audit_status]}</span>
+                          <span className={`whitespace-nowrap text-xs ${q.audit_status === "unreviewed" ? "text-[#5B5F66]" : q.audit_status === "approved" ? "font-bold text-[#1F7A3D]" : q.audit_status === "on_hold" ? "font-bold text-[#9E1031]" : "font-bold text-[#7A4B00]"}`}>{q.audit_status === "on_hold" ? "Waiting" : STATUS_LABEL[q.audit_status]}</span>
                         </span>
                         <span className="text-xs text-[#5B5F66]">{q.rep_name} · {q.dealership}</span>
                         <span className="flex flex-wrap gap-1.5">
                           {q.reasons.map((r) => <span key={r} className="rounded-md bg-[#F0F0F2] px-[7px] py-[3px] text-[11px] font-bold">{REASONS[r]?.tag ?? r}</span>)}
                         </span>
+                        {q.notes && <span className="line-clamp-2 text-xs italic text-[#5B5F66]">“{q.notes}”</span>}
                       </Link>
                     </li>
                   ))}
@@ -205,7 +206,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                       <span className="flex flex-wrap gap-1.5">
                         <Pill tone={detail.card.customer_type === "new_logo" ? "dark" : "light"}>{TYPE_LABELS[detail.card.customer_type as CustomerType]}{detail.card.addendum ? " · addendum" : ""}</Pill>
                         {selected.reasons.filter((r) => r !== "new_logo" && r !== "residential").map((r) => <Pill key={r} tone="amber">{REASONS[r]?.tag ?? r}</Pill>)}
-                        <Pill tone={selected.audit_status === "approved" ? "green" : selected.audit_status === "adjusted" ? "amber" : "outline"}>{STATUS_LABEL[selected.audit_status]}</Pill>
+                        <Pill tone={selected.audit_status === "approved" ? "green" : selected.audit_status === "adjusted" || selected.audit_status === "on_hold" ? "amber" : "outline"}>{STATUS_LABEL[selected.audit_status]}</Pill>
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-3">
@@ -231,6 +232,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                       )}
                       <ReviewPanel key={`${selected.card_id}-${detail.card.points}-${detail.card.is_new_logo}-${detail.card.customer_type}-${selected.audit_status}`}
                         cardId={selected.card_id} nextHref={nextHref} locked={month.status === "finalized"}
+                        status={selected.audit_status} savedNotes={selected.notes ?? ""}
                         current={{ newLogo: detail.card.is_new_logo, customerType: detail.card.customer_type as CustomerType, points: detail.card.points, overridden: Boolean(detail.audit && (detail.audit.new_logo_override !== null || detail.audit.points_override !== null)) }} />
                     </div>
                   </div>

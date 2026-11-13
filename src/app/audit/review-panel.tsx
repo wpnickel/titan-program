@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ui } from "@/components/ui";
 import { CUSTOMER_TYPES, type Check, type CustomerType } from "@/lib/cards";
-import { adjustCard, approveCard } from "./actions";
+import { adjustCard, approveCard, saveNotes } from "./actions";
 
 type Decision = "true" | "false";
 
 /** The decision controls for one card: is it a new logo, anything else to change, and why. */
-export function ReviewPanel({ cardId, nextHref, locked, current }: {
+export function ReviewPanel({ cardId, nextHref, locked, status, savedNotes, current }: {
   cardId: string; nextHref: string; locked: boolean;
+  status: "unreviewed" | "approved" | "adjusted" | "on_hold"; savedNotes: string;
   current: { newLogo: boolean; customerType: CustomerType; points: number; overridden: boolean };
 }) {
   const router = useRouter();
@@ -19,6 +20,7 @@ export function ReviewPanel({ cardId, nextHref, locked, current }: {
   const [type, setType] = useState<CustomerType>(current.customerType);
   const [points, setPoints] = useState(String(current.points));
   const [reason, setReason] = useState("");
+  const [notes, setNotes] = useState(savedNotes);
   const [message, setMessage] = useState<{ kind: "error" | "ok"; text: string } | null>(null);
   const [pending, start] = useTransition();
 
@@ -48,9 +50,23 @@ export function ReviewPanel({ cardId, nextHref, locked, current }: {
     if (!dirty) { setMessage({ kind: "error", text: "Nothing has changed yet." }); return; }
     if (await save()) { setReason(""); setMessage({ kind: "ok", text: "Adjustment saved." }); router.refresh(); }
   });
+  const notesChanged = notes.trim() !== savedNotes.trim();
+  const reviewed = status === "approved" || status === "adjusted";
+  const onNotes = (hold: boolean) => start(async () => {
+    setMessage(null);
+    if (hold && !notes.trim()) { setMessage({ kind: "error", text: "Enter a note about what you are waiting for." }); return; }
+    const r = await saveNotes(cardId, notes, hold);
+    if (r.error) { setMessage({ kind: "error", text: r.error }); return; }
+    setMessage({ kind: "ok", text: hold ? "Saved. This card is waiting for information and is not approved." : !notes.trim() && status === "on_hold" ? "Hold released." : "Note saved." });
+    router.refresh();
+  });
   const onApprove = () => start(async () => {
     setMessage(null);
     if (!(await save())) return;
+    if (notesChanged) {
+      const n = await saveNotes(cardId, notes, false);
+      if (n.error) { setMessage({ kind: "error", text: n.error }); return; }
+    }
     const r = await approveCard(cardId, nextHref);
     if (r?.error) setMessage({ kind: "error", text: r.error });
   });
@@ -87,6 +103,21 @@ export function ReviewPanel({ cardId, nextHref, locked, current }: {
       <label>
         <span className={ui.label}>Reason for any change (saved to the audit log)</span>
         <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} className={ui.input} />
+      </label>
+      <label>
+        <span className={ui.label}>Notes (only you see these)</span>
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={4000} rows={3}
+          placeholder="What you checked, who you contacted, or what you are waiting for"
+          className="min-h-[84px] w-full resize-y rounded-[10px] border border-[#CFD1D6] bg-white px-3 py-2.5 text-sm font-medium text-[#111214] placeholder:text-[#8E929A] outline-none transition focus:border-[#C8173F] focus:ring-4 focus:ring-[#C8173F]/10" />
+        <span className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[13px] text-[#5B5F66]">
+            {status === "on_hold" ? "Waiting for information. This card stays open until you approve or adjust it." : "Saving a note does not approve the card."}
+          </span>
+          <button type="button" onClick={() => onNotes(!reviewed)} disabled={reviewed ? !notesChanged : !notesChanged && status === "on_hold"}
+            className="h-10 cursor-pointer rounded-[10px] border border-[#111214] bg-white px-4 text-sm font-bold hover:bg-[#F5F5F6] disabled:cursor-default disabled:opacity-50">
+            {reviewed ? "Save note" : status === "on_hold" && !notes.trim() ? "Release hold" : "Save notes (not approved)"}
+          </button>
+        </span>
       </label>
       {message && (
         <p role={message.kind === "error" ? "alert" : "status"} className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${message.kind === "error" ? "bg-[#FBE7EC] text-[#9E1031]" : "bg-[#E3F4E8] text-[#1F7A3D]"}`}>{message.text}</p>

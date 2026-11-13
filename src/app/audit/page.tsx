@@ -8,6 +8,7 @@ import { TYPE_LABELS, money, newLogoChecks, type CustomerType } from "@/lib/card
 import { markAlertsRead } from "./actions";
 import { AuditProvider } from "./audit-context";
 import { AuditList } from "./audit-list";
+import { EditCardButton } from "./edit-card";
 import { REASONS, type QueueRow } from "./audit-types";
 import { MonthControls } from "./month-controls";
 import { PdfViewer } from "./pdf-viewer";
@@ -180,7 +181,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                               {detail.rep} · {detail.dealership}{detail.card.contract_number ? ` · contract ${detail.card.contract_number}` : ""} · sold {shortDate(detail.card.sale_date)} · entered in {monthName(detail.card.entry_month)}
                             </div>
                           </div>
-                          <span className="flex flex-wrap gap-1.5">
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <EditCardButton />
                             <Pill tone={detail.card.customer_type === "new_logo" ? "dark" : "light"}>{TYPE_LABELS[detail.card.customer_type as CustomerType]}{detail.card.addendum ? " · addendum" : ""}</Pill>
                             {selected.reasons.filter((r) => r !== "new_logo" && r !== "residential").map((r) => <Pill key={r} tone="amber">{REASONS[r]?.tag ?? r}</Pill>)}
                           </span>

@@ -15,6 +15,7 @@ type Ctx = {
   prevHref: string | null;
   skipHref: string | null;   // the next card in the list, whatever its status
   nextTodoHref: string;      // where to go after approving: the next card still to do
+  editing: boolean; openEdit: () => void; closeEdit: () => void;   // the edit-card popup
 };
 
 const AuditCtx = createContext<Ctx | null>(null);
@@ -29,6 +30,7 @@ export function AuditProvider({ rows, selectedId, month, children }: { rows: Que
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("queue");
   const [filter, setFilter] = useState("all");
+  const [editing, setEditing] = useState(false);
 
   const value = useMemo<Ctx>(() => {
     const q = query.trim().toLowerCase();
@@ -45,8 +47,9 @@ export function AuditProvider({ rows, selectedId, month, children }: { rows: Que
       prevHref: idx > 0 ? hrefFor(visible[idx - 1].card_id) : null,
       skipHref: skip ? hrefFor(skip.card_id) : null,
       nextTodoHref: nextTodo ? hrefFor(nextTodo.card_id) : `/audit?month=${month}`,
+      editing, openEdit: () => setEditing(true), closeEdit: () => setEditing(false),
     };
-  }, [rows, selectedId, month, query, sort, filter]);
+  }, [rows, selectedId, month, query, sort, filter, editing]);
 
   return <AuditCtx.Provider value={value}>{children}</AuditCtx.Provider>;
 }

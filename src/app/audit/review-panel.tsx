@@ -7,6 +7,7 @@ import { ui } from "@/components/ui";
 import { CUSTOMER_TYPES, type Check, type CustomerType } from "@/lib/cards";
 import { adjustCard, approveCard, saveNotes } from "./actions";
 import { useAudit } from "./audit-context";
+import { EditCardDialog } from "./edit-card";
 import { STATUS_LABEL, type AuditStatus } from "./audit-types";
 
 type Decision = "true" | "false";
@@ -45,7 +46,7 @@ export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision,
   current: { newLogo: boolean; customerType: CustomerType; points: number; overridden: boolean };
 }) {
   const router = useRouter();
-  const { position, visible, prevHref, skipHref, nextTodoHref } = useAudit();
+  const { position, visible, prevHref, skipHref, nextTodoHref, openEdit } = useAudit();
   const [decision, setDecision] = useState<Decision>(current.newLogo ? "true" : "false");
   const [type, setType] = useState<CustomerType>(current.customerType);
   const [points, setPoints] = useState(String(current.points));
@@ -123,12 +124,12 @@ export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision,
         case "j": if (l.skipHref) { e.preventDefault(); router.push(l.skipHref); } break;
         case "k": if (l.prevHref) { e.preventDefault(); router.push(l.prevHref); } break;
         case "n": e.preventDefault(); notesRef.current?.focus(); break;
-        case "e": e.preventDefault(); router.push(`/cards/${cardId}`); break;
+        case "e": e.preventDefault(); openEdit(); break;
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [router, cardId]);
+  }, [router, openEdit]);
 
   return (
     <section aria-label="Card details" className="flex min-h-0 min-w-0 flex-1 flex-col rounded-[18px] border border-[#E6E7EA] bg-white">
@@ -206,7 +207,7 @@ export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision,
                   {current.overridden && (
                     <button type="button" onClick={onAuto} className="h-10 cursor-pointer rounded-[10px] border border-[#CFD1D6] bg-white px-4 text-sm font-bold text-[#3A3D42] hover:bg-[#F5F5F6]">Use calculated values</button>
                   )}
-                  <Link href={`/cards/${cardId}`} className="inline-flex h-10 items-center rounded-[10px] border border-[#CFD1D6] bg-white px-4 text-sm font-bold !text-[#3A3D42] hover:bg-[#F5F5F6]">Edit full card</Link>
+                  <button type="button" onClick={openEdit} className="h-10 cursor-pointer rounded-[10px] border border-[#CFD1D6] bg-white px-4 text-sm font-bold text-[#3A3D42] hover:bg-[#F5F5F6]">Edit full card</button>
                 </div>
               </div>
             </Section>
@@ -224,6 +225,7 @@ export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision,
         <span><b className="text-[#3A3D42]">E</b> edit full card</span>
         {position > 0 && <span className="ml-auto font-semibold text-[#3A3D42]">Card {position} of {visible.length}</span>}
       </div>
+      <EditCardDialog locked={locked} />
     </section>
   );
 }

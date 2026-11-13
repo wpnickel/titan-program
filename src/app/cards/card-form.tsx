@@ -25,6 +25,8 @@ export type CardFormProps = {
   leadSources: Option[];
   products: ProductInfo[];
   readOnlyReason?: string;
+  /** Shown inside the audit popup: tells the audit page when something was saved, and leaves out Delete. */
+  embedded?: boolean;
 };
 
 type Step = "similar" | "short" | "residential";
@@ -68,8 +70,10 @@ function Segmented<T extends string>({ label, options, value, onChange, tall }: 
   );
 }
 
-export function CardForm({ initial, reps, months, industries, leadSources, products, readOnlyReason }: CardFormProps) {
+export function CardForm({ initial, reps, months, industries, leadSources, products, readOnlyReason, embedded }: CardFormProps) {
   const router = useRouter();
+  /** Inside the audit popup, let the page behind know the card changed so it can refresh when the popup closes. */
+  const tellAudit = () => { if (embedded) window.parent.postMessage({ type: "titan-card-saved" }, window.location.origin); };
   const [cardId, setCardId] = useState(initial.id);
   const [submitted, setSubmitted] = useState(initial.submitted);
   const [repId, setRepId] = useState(initial.rep_id);
@@ -158,7 +162,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
     }
     setBusy("save");
     const id = await persist();
-    if (id) setMessage({ kind: "ok", text: submitted ? "Changes saved." : "Draft saved. Submit it when it is ready." });
+    if (id) { setMessage({ kind: "ok", text: submitted ? "Changes saved." : "Draft saved. Submit it when it is ready." }); tellAudit(); }
     setBusy(null);
   }
 
@@ -213,6 +217,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
       const done = await finishUpload(id, prep.path, f.name);
       if (done.error || !done.file) { setMessage({ kind: "error", text: `${f.name}: ${done.error ?? "upload failed."}` }); continue; }
       setFiles((cur) => [...cur, done.file!]);
+      tellAudit();
     }
     setBusy(null);
   }
@@ -220,7 +225,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
   async function dropFile(f: FileInfo) {
     setBusy("upload");
     const r = await removeFile(f.id);
-    if (r.error) setMessage({ kind: "error", text: r.error }); else setFiles((cur) => cur.filter((x) => x.id !== f.id));
+    if (r.error) setMessage({ kind: "error", text: r.error }); else { setFiles((cur) => cur.filter((x) => x.id !== f.id)); tellAudit(); }
     setBusy(null);
   }
 
@@ -240,7 +245,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
   return (
     <>
       <div className="flex flex-wrap items-center gap-3.5">
-        <h1 className="text-[30px] font-extrabold tracking-tight">{initial.id ? "Tally card" : cardId ? "Tally card" : "New tally card"}</h1>
+        <h1 className={`${embedded ? "text-2xl" : "text-[30px]"} font-extrabold tracking-tight`}>{initial.id ? "Tally card" : cardId ? "Tally card" : "New tally card"}</h1>
         <Pill tone={submitted ? "green" : "light"}>{submitted ? "Submitted" : "Draft"}</Pill>
         {isLate && <Pill tone="crimson">Late entry</Pill>}
         <span className="text-[13px] text-[#5B5F66]">{rep ? `${rep.dealership} · ` : ""}entering for {monthName(month, true)}</span>
@@ -475,7 +480,7 @@ export function CardForm({ initial, reps, months, industries, leadSources, produ
                 </>
               )}
               <p className="text-center text-xs text-[#5B5F66]">You can edit this card until {monthName(month)} is locked.</p>
-              {cardId && (
+              {cardId && !embedded && (
                 <button type="button" onClick={() => setDialog("delete")} disabled={busy !== null} className="cursor-pointer text-[13px] font-semibold text-[#C8173F] hover:underline">Delete this card</button>
               )}
             </section>

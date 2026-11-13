@@ -7,6 +7,7 @@ const TABS = [
   { label: "Users", href: "/admin/users" },
   { label: "Dealerships", href: "/admin/dealerships" },
   { label: "Ranking rules", href: "/admin/rules" },
+  { label: "Import", href: "/admin/import" },
 ] as const;
 
 export function AdminTabs() {

@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { Pill, ui } from "@/components/ui";
+import { ui } from "@/components/ui";
 import { requireSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { TYPE_LABELS, money, newLogoChecks, type CustomerType } from "@/lib/cards";
+import { newLogoChecks, type CustomerType } from "@/lib/cards";
 import { markAlertsRead } from "./actions";
 import { AuditProvider } from "./audit-context";
 import { AuditList } from "./audit-list";
-import { EditCardButton } from "./edit-card";
-import { REASONS, type QueueRow } from "./audit-types";
+import { FullCard } from "./full-card";
+import { PdfDialog } from "./pdf-dialog";
+import type { QueueRow } from "./audit-types";
 import { MonthControls } from "./month-controls";
-import { PdfViewer } from "./pdf-viewer";
 import { ReviewPanel, RuleChecks } from "./review-panel";
 
 export const instant = false;
@@ -22,7 +22,6 @@ const NY = "America/New_York";
 const monthName = (iso: string, year = false) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "long", ...(year ? { year: "numeric" } : {}), timeZone: "UTC" });
 const shortMonth = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
-const shortDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const stamp = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: NY });
 const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: NY });
 
@@ -159,55 +158,32 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         </header>
 
         {month && (
-          // Three panes that scroll on their own: the list, the review pane, and the PDF.
+          // Three panes that scroll on their own: the list, the whole tally card, and the audit decision. The PDF opens in a popup.
           <AuditProvider key={month.month_start} rows={queue} selectedId={selected?.card_id ?? ""} month={month.month_start}>
             <div className="flex min-h-0 flex-1 flex-col gap-3.5 lg:flex-row">
               <AuditList monthName={monthName(month.month_start)} />
 
               {selected && detail ? (
                 <>
+                  <FullCard card={detail.full} tags={selected.reasons} />
                   <ReviewPanel key={`${selected.card_id}-${detail.card.points}-${detail.card.is_new_logo}-${detail.card.customer_type}-${selected.audit_status}`}
                     cardId={selected.card_id} locked={month.status === "finalized"} status={selected.audit_status} savedNotes={selected.notes ?? ""}
                     needsDecision={selected.reasons.some((r) => ["new_logo", "name_match", "failed_checks"].includes(r))}
+                    hasFiles={detail.files.length > 0}
                     activityCount={detail.activity.length}
                     rulesHint={detail.card.is_new_logo ? "counts as a new logo" : "not a new logo"}
                     current={{ newLogo: detail.card.is_new_logo, customerType: detail.card.customer_type as CustomerType, points: detail.card.points, overridden: Boolean(detail.audit && (detail.audit.new_logo_override !== null || detail.audit.points_override !== null)) }}
-                    facts={
-                      <div className="flex flex-col gap-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h2 className="text-2xl font-extrabold tracking-tight">{detail.card.business_name}</h2>
-                            <div className="mt-0.5 text-sm text-[#5B5F66]">
-                              {detail.rep} · {detail.dealership}{detail.card.contract_number ? ` · contract ${detail.card.contract_number}` : ""} · sold {shortDate(detail.card.sale_date)} · entered in {monthName(detail.card.entry_month)}
-                            </div>
+                    summary={
+                      <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="rounded-xl bg-[#111214] px-3.5 py-3 text-white">
+                            <div className="text-xs font-semibold text-[#C9CBD0]">Points on this card</div>
+                            <div className="text-2xl font-extrabold tabular-nums">{detail.card.points}</div>
                           </div>
-                          <span className="flex flex-wrap items-center gap-1.5">
-                            <EditCardButton />
-                            <Pill tone={detail.card.customer_type === "new_logo" ? "dark" : "light"}>{TYPE_LABELS[detail.card.customer_type as CustomerType]}{detail.card.addendum ? " · addendum" : ""}</Pill>
-                            {selected.reasons.filter((r) => r !== "new_logo" && r !== "residential").map((r) => <Pill key={r} tone="amber">{REASONS[r]?.tag ?? r}</Pill>)}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                          {[["RMR", money(Number(detail.card.rmr_amount))], ["Install", money(Number(detail.card.install_amount))], ["Term", `${detail.card.term_months} mo`], ["TCV", money(Number(detail.card.tcv))], ["Points", String(detail.card.points)]].map(([l, v]) => (
-                            <div key={l} className={`whitespace-nowrap rounded-xl px-2.5 py-2.5 ${l === "Points" ? "bg-[#111214] text-white" : "bg-[#F5F5F6]"}`}>
-                              <div className={`text-xs font-semibold ${l === "Points" ? "text-[#C9CBD0]" : "text-[#5B5F66]"}`}>{l}</div>
-                              <div className="text-[15px] font-extrabold tabular-nums">{v}</div>
-                            </div>
-                          ))}
-                        </div>
-                        <div>
-                          <div className="mb-1.5 text-[13px] font-semibold text-[#5B5F66]">Products sold</div>
-                          {detail.products.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5 text-sm">
-                              {detail.products.map((p) => (
-                                <span key={p.label} className="inline-flex items-center gap-1.5 rounded-full border border-[#111214] bg-white px-3 py-1 font-bold">
-                                  {p.label}{p.quantity > 1 && <span className="rounded-full bg-[#111214] px-1.5 text-xs text-white">× {p.quantity}</span>}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm font-semibold text-[#9E1031]">No products are marked as sold on this card.</p>
-                          )}
+                          <div className="rounded-xl bg-[#F5F5F6] px-3.5 py-3">
+                            <div className="text-xs font-semibold text-[#5B5F66]">Counts as a new logo</div>
+                            <div className="text-2xl font-extrabold">{detail.card.is_new_logo ? "Yes" : "No"}</div>
+                          </div>
                         </div>
                         {detail.audit?.reason && (
                           <p className="rounded-lg bg-[#FFF4DC] px-3 py-2 text-sm text-[#7A4B00]"><b>Audit note:</b> {detail.audit.reason}</p>
@@ -219,14 +195,12 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                     activity={
                       <ul className="flex flex-col gap-2">
                         {detail.activity.map((l, n) => (
-                          <li key={n} className="flex gap-3 text-[13px]"><span className="w-[110px] flex-none text-[#5B5F66]">{stamp(l.at)}</span><span><b>{l.who}</b> · {l.what}</span></li>
+                          <li key={n} className="flex gap-3 text-[13px]"><span className="w-[96px] flex-none text-[#5B5F66]">{stamp(l.at)}</span><span><b>{l.who}</b> · {l.what}</span></li>
                         ))}
                         {detail.activity.length === 0 && <li className="text-[13px] text-[#5B5F66]">No activity recorded.</li>}
                       </ul>
                     } />
-                  <aside aria-label="PDFs" className={`${ui.card} flex min-h-[560px] min-w-0 flex-col p-3.5 lg:min-h-0 lg:w-[400px] lg:flex-none 2xl:w-[480px]`}>
-                    <PdfViewer key={selected.card_id} files={detail.files} />
-                  </aside>
+                  <PdfDialog files={detail.files} title={`${detail.card.business_name}: contract PDF`} />
                 </>
               ) : (
                 <p className={`${ui.card} flex min-w-0 flex-1 items-center justify-center p-10 text-center text-sm text-[#5B5F66]`}>
@@ -244,24 +218,33 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 async function loadDetail(supabase: Awaited<ReturnType<typeof createClient>>, id: string) {
   const { data: card } = await supabase
     .from("tally_cards")
-    .select("id, business_name, contract_number, sale_date, entry_month, customer_type, addendum, term_months, install_amount, rmr_amount, tcv, points, is_new_logo, dealership_id, reps(first_name, last_name), dealerships(name), tally_card_products(quantity, products(label, qualifies_new_logo)), tally_card_files(id, file_name, size_bytes), card_audit(status, new_logo_override, points_override, reason)")
+    .select("id, business_name, contract_number, sale_date, entry_month, customer_type, addendum, term_months, install_amount, rmr_amount, tcv, points, is_new_logo, is_late_entry, zip_code, comments, dealership_id, reps(first_name, last_name), dealerships(name), industries(name), tally_card_lead_sources(lead_sources(name)), tally_card_products(quantity, products(id, key, label, points, qualifies_new_logo, needs_audio_sensor)), tally_card_files(id, file_name, size_bytes), card_audit(status, new_logo_override, points_override, reason)")
     .eq("id", id).maybeSingle();
   if (!card) return null;
   const [{ data: similar }, { data: activity }] = await Promise.all([
     supabase.rpc("similar_customers", { p_dealership: card.dealership_id, p_name: card.business_name, p_exclude: id }),
     supabase.rpc("card_activity", { p_card: id }),
   ]);
-  const lines = card.tally_card_products as unknown as { quantity: number; products: { label: string; qualifies_new_logo: boolean } }[];
+  const lines = card.tally_card_products as unknown as { quantity: number; products: { id: string; key: string; label: string; points: number; qualifies_new_logo: boolean; needs_audio_sensor: boolean } }[];
   const qualifying = lines.filter((l) => l.products.qualifies_new_logo && l.quantity > 0).map((l) => l.products.label.replace(/\s*\(.*\)$/, ""));
   const first = ((similar ?? []) as { business_name: string; first_sale: string }[])[0];
   const audit = (Array.isArray(card.card_audit) ? card.card_audit[0] : card.card_audit) as { status: string; new_logo_override: boolean | null; points_override: number | null; reason: string | null } | null;
   const rep = card.reps as unknown as { first_name: string; last_name: string };
   return {
     card, audit,
-    rep: `${rep.first_name} ${rep.last_name}`,
-    dealership: (card.dealerships as unknown as { name: string }).name,
-    products: lines.filter((l) => l.quantity > 0).map((l) => ({ label: l.products.label.replace(/\s*\(.*\)$/, ""), quantity: l.quantity })),
-    files: card.tally_card_files as { id: string; file_name: string }[],
+    files: card.tally_card_files as { id: string; file_name: string; size_bytes: number }[],
+    full: {
+      business_name: card.business_name, rep: `${rep.first_name} ${rep.last_name}`,
+      dealership: (card.dealerships as unknown as { name: string }).name,
+      zip_code: card.zip_code, comments: card.comments,
+      industry: (card.industries as unknown as { name: string } | null)?.name ?? null,
+      leadSources: (card.tally_card_lead_sources as unknown as { lead_sources: { name: string } }[]).map((l) => l.lead_sources.name),
+      customer_type: card.customer_type as CustomerType, addendum: card.addendum, contract_number: card.contract_number,
+      sale_date: card.sale_date, entry_month: card.entry_month, is_late_entry: card.is_late_entry,
+      term_months: card.term_months, install_amount: Number(card.install_amount), rmr_amount: Number(card.rmr_amount), tcv: Number(card.tcv), points: card.points,
+      products: lines.filter((l) => l.quantity > 0).map((l) => ({ ...l.products, quantity: l.quantity })),
+      files: card.tally_card_files as { id: string; file_name: string; size_bytes: number }[],
+    },
     checks: newLogoChecks({
       type: card.customer_type as CustomerType, addendum: card.addendum, qualifying,
       rmr: Number(card.rmr_amount), install: Number(card.install_amount), term: card.term_months,

@@ -40,13 +40,13 @@ function Section({ title, hint, open, children }: { title: string; hint?: string
  * The whole right-hand review pane for one card: an action bar that stays in view, the card's facts,
  * notes, and collapsible Adjust / Rule checks / Activity sections. Keyboard: A approve, J next, K previous, N notes, E edit.
  */
-export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision, facts, rules, rulesHint, activity, activityCount, current }: {
+export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision, hasFiles, summary, rules, rulesHint, activity, activityCount, current }: {
   cardId: string; locked: boolean; status: AuditStatus; savedNotes: string; needsDecision: boolean;
-  facts: ReactNode; rules: ReactNode | null; activity: ReactNode; activityCount: number; rulesHint: string;
+  hasFiles: boolean; summary: ReactNode; rules: ReactNode | null; activity: ReactNode; activityCount: number; rulesHint: string;
   current: { newLogo: boolean; customerType: CustomerType; points: number; overridden: boolean };
 }) {
   const router = useRouter();
-  const { position, visible, prevHref, skipHref, nextTodoHref, openEdit } = useAudit();
+  const { position, visible, prevHref, skipHref, nextTodoHref, openEdit, openPdf } = useAudit();
   const [decision, setDecision] = useState<Decision>(current.newLogo ? "true" : "false");
   const [type, setType] = useState<CustomerType>(current.customerType);
   const [points, setPoints] = useState(String(current.points));
@@ -125,33 +125,36 @@ export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision,
         case "k": if (l.prevHref) { e.preventDefault(); router.push(l.prevHref); } break;
         case "n": e.preventDefault(); notesRef.current?.focus(); break;
         case "e": e.preventDefault(); openEdit(); break;
+        case "p": if (hasFiles) { e.preventDefault(); openPdf(); } break;
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [router, openEdit]);
+  }, [router, openEdit, openPdf, hasFiles]);
 
   return (
-    <section aria-label="Card details" className="flex min-h-0 min-w-0 flex-1 flex-col rounded-[18px] border border-[#E6E7EA] bg-white">
+    <section aria-label="Audit decision" className="flex min-h-0 min-w-0 flex-col rounded-[18px] border border-[#E6E7EA] bg-white lg:w-[360px] lg:flex-none 2xl:w-[420px]">
       {/* Action bar: always in view */}
-      <div className="flex flex-wrap items-center gap-2.5 border-b border-[#E6E7EA] px-5 py-3">
-        <span className={`inline-flex h-[26px] items-center rounded-full px-2.5 text-xs font-bold ${STATUS_CLASS[status]}`}>{STATUS_LABEL[status]}</span>
-        <span className="flex-1" />
+      <div className="flex flex-col gap-2.5 border-b border-[#E6E7EA] px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className={`inline-flex h-[26px] items-center rounded-full px-2.5 text-xs font-bold ${STATUS_CLASS[status]}`}>{STATUS_LABEL[status]}</span>
+          {position > 0 && <span className="text-[12.5px] font-semibold text-[#3A3D42]">Card {position} of {visible.length}</span>}
+        </div>
         <fieldset disabled={locked || pending} className="m-0 flex min-w-0 gap-2 border-0 p-0">
           {skipHref && (
-            <Link href={skipHref} className="inline-flex h-[42px] items-center rounded-[10px] border border-[#CFD1D6] bg-white px-3.5 text-sm font-bold !text-[#3A3D42] hover:bg-[#F5F5F6]">
+            <Link href={skipHref} className="inline-flex h-[44px] items-center rounded-[10px] border border-[#CFD1D6] bg-white px-3.5 text-sm font-bold !text-[#3A3D42] hover:bg-[#F5F5F6]">
               Skip <span className="ml-1.5 font-semibold text-[#5B5F66]">J</span>
             </Link>
           )}
-          <button type="button" onClick={onApprove} className="h-[42px] cursor-pointer rounded-[10px] bg-[#C8173F] px-5 text-[15px] font-extrabold text-white hover:bg-[#9E1031] disabled:opacity-60">
+          <button type="button" onClick={onApprove} className="h-[44px] min-w-0 flex-1 cursor-pointer rounded-[10px] bg-[#C8173F] px-4 text-[15px] font-extrabold text-white hover:bg-[#9E1031] disabled:opacity-60">
             {pending ? "Working…" : dirty ? "Save and approve" : "Approve and next"}
             {!pending && <span className="ml-2 rounded-md bg-white/25 px-[7px] py-0.5 text-xs font-bold">A</span>}
           </button>
         </fieldset>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-[18px]">
-        {facts}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
+        {summary}
 
         <fieldset disabled={locked || pending} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
           <label>
@@ -218,12 +221,12 @@ export function ReviewPanel({ cardId, locked, status, savedNotes, needsDecision,
         {locked && <p className="text-sm font-semibold text-[#7A4B00]">This month is finalized. Reopen it to make changes.</p>}
       </div>
 
-      <div className="flex flex-wrap gap-x-[18px] gap-y-1 border-t border-[#E6E7EA] px-5 py-2.5 text-xs text-[#5B5F66]">
+      <div className="flex flex-wrap gap-x-[14px] gap-y-1 border-t border-[#E6E7EA] px-4 py-2.5 text-xs text-[#5B5F66]">
         <span><b className="text-[#3A3D42]">A</b> approve and next</span>
         <span><b className="text-[#3A3D42]">J / K</b> next / previous</span>
         <span><b className="text-[#3A3D42]">N</b> notes</span>
-        <span><b className="text-[#3A3D42]">E</b> edit full card</span>
-        {position > 0 && <span className="ml-auto font-semibold text-[#3A3D42]">Card {position} of {visible.length}</span>}
+        <span><b className="text-[#3A3D42]">E</b> edit card</span>
+        <span><b className="text-[#3A3D42]">P</b> view PDF</span>
       </div>
       <EditCardDialog locked={locked} />
     </section>

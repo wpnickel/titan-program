@@ -16,6 +16,7 @@ type Ctx = {
   skipHref: string | null;   // the next card in the list, whatever its status
   nextTodoHref: string;      // where to go after approving: the next card still to do
   editing: boolean; openEdit: () => void; closeEdit: () => void;   // the edit-card popup
+  pdf: { open: boolean; fileId: string | null }; openPdf: (fileId?: string) => void; closePdf: () => void;   // the PDF popup
 };
 
 const AuditCtx = createContext<Ctx | null>(null);
@@ -31,6 +32,7 @@ export function AuditProvider({ rows, selectedId, month, children }: { rows: Que
   const [sort, setSort] = useState<SortKey>("queue");
   const [filter, setFilter] = useState("all");
   const [editing, setEditing] = useState(false);
+  const [pdf, setPdf] = useState<{ open: boolean; fileId: string | null }>({ open: false, fileId: null });
 
   const value = useMemo<Ctx>(() => {
     const q = query.trim().toLowerCase();
@@ -48,8 +50,9 @@ export function AuditProvider({ rows, selectedId, month, children }: { rows: Que
       skipHref: skip ? hrefFor(skip.card_id) : null,
       nextTodoHref: nextTodo ? hrefFor(nextTodo.card_id) : `/audit?month=${month}`,
       editing, openEdit: () => setEditing(true), closeEdit: () => setEditing(false),
+      pdf, openPdf: (fileId) => setPdf({ open: true, fileId: fileId ?? null }), closePdf: () => setPdf({ open: false, fileId: null }),
     };
-  }, [rows, selectedId, month, query, sort, filter, editing]);
+  }, [rows, selectedId, month, query, sort, filter, editing, pdf]);
 
   return <AuditCtx.Provider value={value}>{children}</AuditCtx.Provider>;
 }

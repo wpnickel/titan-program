@@ -26,7 +26,7 @@ export function AuditList({ monthName }: { monthName: string }) {
     .filter((c) => c.value === "all" || c.value === filter || c.count > 0);
 
   return (
-    <aside aria-label={`Cards to audit in ${monthName}`} className="flex max-h-[70vh] min-h-0 flex-col rounded-[18px] border border-[#E6E7EA] bg-white lg:max-h-none lg:w-[300px] lg:flex-none 2xl:w-[340px]">
+    <aside aria-label={`Cards to audit in ${monthName}`} className="flex max-h-[70vh] min-h-0 flex-col rounded-[18px] border border-[#E6E7EA] bg-white lg:max-h-none lg:w-[280px] lg:flex-none 2xl:w-[320px]">
       <div className="flex flex-col gap-2.5 border-b border-[#E6E7EA] p-3.5">
         <div className="flex gap-2">
           <label className="min-w-0 flex-1">

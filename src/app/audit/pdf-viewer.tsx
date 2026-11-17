@@ -5,8 +5,8 @@ import { useState } from "react";
 type File = { id: string; file_name: string };
 
 /** Shows a card's PDFs in the page so the reviewer never leaves the card. */
-export function PdfViewer({ files }: { files: File[] }) {
-  const [i, setI] = useState(0);
+export function PdfViewer({ files, initialId }: { files: File[]; initialId?: string | null }) {
+  const [i, setI] = useState(() => Math.max(0, files.findIndex((f) => f.id === initialId)));
   const file = files[Math.min(i, files.length - 1)];
   if (!file) {
     return <div className="flex min-h-[280px] flex-1 items-center justify-center rounded-xl bg-[#F5F5F6] p-6 text-center text-sm font-semibold text-[#5B5F66]">No PDFs are attached to this card.</div>;
